@@ -209,6 +209,9 @@ table.t tr:last-child td{border-bottom:0}
 .suma{align-items:flex-start}
 .sitem{display:flex;align-items:center;gap:6px;justify-content:space-between;padding:3px 0}
 .sitem button{border:0;background:rgba(200,67,47,.12);color:var(--rojo);border-radius:8px;width:26px;height:26px;font-size:12px;font-weight:800;flex:none}
+.ruta{background:var(--azul2);border-radius:14px;padding:10px 12px;margin-bottom:10px;font-size:14px;line-height:1.45}
+.zcab{font-size:12px;font-weight:800;letter-spacing:.04em;color:var(--azul);text-transform:uppercase;margin:12px 2px 6px}
+.nro{width:26px;height:26px;border-radius:50%;background:var(--tinta);color:#fff;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;margin:0 0 -18px 8px;position:relative;z-index:2}
 </style>
 </head>
 <body>
@@ -227,6 +230,38 @@ const PERFILES=[
 ];
 const WA_NEGOCIO="3152109656";
 const GRAMOS={"mar-personal":{sal:1,cam:250},"mar-doble":{sal:2,cam:500}};
+
+const BARRIOS={"1":["Arenal","Buenos Aires","Buenos Aires II","Cardales","Colombia","David Nuñez Cala","El Cruce","El Dorado","El Recreo","Gonzalo Jiménez de Quesada","Invasión San Luis","Isla del Zapato","La Campana","La Victoria","La Victoria II","Las Margaritas","Las Playas","Palmira","San Francisco","Sector Comercial y Muelle","Tres Unidos","Urb. Nuevo Palmira"],
+"2":["Aguas Claras","Ciudad Bolívar","Galán Gómez (Camilo Torres)","Olaya Herrera","Parnaso","Pueblo Nuevo","Torcoroma","Uribe Uribe","Villa Luz"],
+"3":["Algarrobos","Alto de los Ángeles","Altos de la Virgen","Altos del Rosario","Caminos de San Silvestre","Belén","Brisas del 20 de Enero","Campo Hermoso","Ciudadela Pipatón","Colinas del Norte","Colinas del Sur","Cortijillo","Cristo Rey","Eduardo Rolón (Coviba)","Internacional","22 de Marzo","Jerusalén","Jorge Eliécer Gaitán","La Castellana","La Floresta","La Gran Vía","La Libertad","La Paz","La Paz II","Los Ficus","Luis Eleazar","Novalito","Primero de Abril","San Judas Tadeo","Santa Isabel","Brisas de la Libertad","Miradores del Cacique","Veinte de Enero","Villa María Irida","Villa Nueva","Villas de Santa Isabel"],
+"4":["Altos del Cincuentenario","Altos del Cañaveral","Antonia Santos","Autoconstrucción VII Etapa Cincuentenario","Bellavista","Bosques de la Cira","Bosques de la Cira II","Buenavista","Buenavista II","Cincuentenario","Cincuentenario VI Etapa El Madrigal","Ciudadela del Cincuentenario","El Bosque","El Castillo","El Palmar","El Refugio","Nuevo Milenio Sur","Villa del Cincuentenario","José Antonio Galán","La Liga","La Península","Las Brisas","Las Nieves","Limonar","Los Almendros","Los Lagos","Los Naranjos","Los Nogales","Los Pinos","Marsella","Miradores de la Ceiba","Prados del Cincuentenario","Planada del Cerro","Santa Bárbara","Tamarindos Club","Urbanización 2000","Villa Sandra","Villa de Leyva","Villa Olímpica","Villa Rosa","Yarima","Los Mandarinos"],
+"5":["Alcázar","Colinas del Seminario","La Nueva Esperanza","Las Torres","Nuevo Milenio","Barrancabermeja","Campo Alegre","Chapinero","El Chicó","El Porvenir","El Triunfo","Chapinero II","Ramaral","Tierradentro II","La Candelaria","La Esperanza","La Independencia","Las Mercedes","La Tora","Las Américas","Las Camelias","Las Malvinas Bajas","Los Rosales","Malvinas Alta","Miraflores","Primero de Mayo","San Pedro Claver","San José de Provivienda","San José Obrero","Santa Ana","Santander","Simón Bolívar","Tierradentro","Urbanización Los Lagos","Versalles","Villa Rosita"],
+"6":["Antonio Nariño","Benjamín Herrera","Boston","Brisas de San Martín","Brisas de Versalles","Brisas del Oriente","Corintos","Danubio","Kennedy","Las Granjas","Los Álamos","Los Comuneros","Oro Negro","Puerta del Sol","Rafael Rangel","San Pedro","Urbanización Las Granjas","Veinte de Agosto","Veinte de Julio","Villa del Coral","Villa Fauda","Los Reyes","6 de Enero"],
+"7":["16 de Marzo","9 de Abril","Altos del Campestre","Las Palmas","Villa Aura","Campestre","Colinas del Campestre","Divino Niño","El Campín","El Paraíso","Las Flores","Los Fundadores","María Eugenia","Minas del Paraíso","Nuevo Horizonte","Pablo Acuña","Prados del Campestre","Los Corales","Minas del Paraíso VI Etapa","Vereda La Independencia","Villarelys Uno","Villarelys Dos","Villarelys Tres"]};
+const ZONA={1:"Occidente · sector comercial",2:"Centro-occidente",3:"Norte",4:"Sur",5:"Centro-oriente",6:"Nororiente y oriente",7:"Suroriente"};
+// posición aproximada de cada comuna (x: oeste→este, y: sur→norte) para ordenar el recorrido
+const POS={1:[0,0.6],2:[1,0.5],3:[1.1,1.6],4:[1,-0.9],5:[2,0.4],6:[3,1.1],7:[2.4,-1]};
+const LISTA_B=Object.entries(BARRIOS).flatMap(([c,l])=>l.map(n=>({n,c:+c})));
+const norm=t=>String(t||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9 ]/g," ").replace(/\s+/g," ").trim();
+function buscarBarrio(t,max){ const q=norm(t); if(!q) return []; const r=[]; LISTA_B.forEach(b=>{const k=norm(b.n); const i=k.indexOf(q); if(i>=0) r.push({...b,s:i===0?0:(k.includes(" "+q)?1:2)});}); return r.sort((a,b)=>a.s-b.s||a.n.length-b.n.length).slice(0,max||6); }
+function detectarBarrio(texto){ const t=" "+norm(texto)+" "; let mejor=null; LISTA_B.forEach(b=>{const k=norm(b.n); if(k.length>3&&t.includes(" "+k+" ")&&(!mejor||k.length>norm(mejor.n).length)) mejor=b;}); return mejor; }
+const comunaDe=p=>p.comuna||(p.barrio?(LISTA_B.find(b=>norm(b.n)===norm(p.barrio))||{}).c:null)||(detectarBarrio(p.barrio+" "+p.dir)||{}).c||null;
+const barrioDe=p=>p.barrio||(detectarBarrio(p.dir)||{}).n||"";
+function ordenarRuta(lista){
+  const ini=S.config.partida_comuna||1; const dist=(a,b)=>{const p=POS[a],q=POS[b];return Math.hypot(p[0]-q[0],p[1]-q[1]);};
+  const com=[...new Set(lista.map(comunaDe).filter(Boolean))]; const orden=[]; let act=ini;
+  const quedan=new Set(com); if(quedan.has(act)){orden.push(act);quedan.delete(act);}
+  while(quedan.size){ let m=null,md=1e9; quedan.forEach(c=>{const d=dist(act,c); if(d<md){md=d;m=c;}}); orden.push(m); quedan.delete(m); act=m; }
+  const pos=c=>{const i=orden.indexOf(c);return i<0?99:i;};
+  return lista.slice().sort((a,b)=>pos(comunaDe(a))-pos(comunaDe(b))||norm(barrioDe(a)).localeCompare(norm(barrioDe(b)))||(a.hora||"99").localeCompare(b.hora||"99"));
+}
+function linkMaps(lista){
+  const lugar=p=>[p.dir,barrioDe(p),"Barrancabermeja"].filter(Boolean).join(", ");
+  const ori=(S.config.partida_dir?S.config.partida_dir+", ":"")+(S.config.partida_barrio||"")+", Barrancabermeja";
+  const l=lista.filter(p=>p.dir||barrioDe(p)).slice(0,10); if(!l.length) return "";
+  const dest=lugar(l[l.length-1]), way=l.slice(0,-1).map(lugar).join("|");
+  return "https://www.google.com/maps/dir/?api=1&travelmode=driving&origin="+encodeURIComponent(ori)+"&destination="+encodeURIComponent(dest)+(way?"&waypoints="+encodeURIComponent(way):"");
+}
 
 const sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true}});
 
@@ -389,7 +424,7 @@ function tarjeta(p,modo){
   let h='<div class="ped'+(hecho&&modo==="ent"?" hecho":"")+'"><div class="cab"><div class="hr">'+(p.hora?h12(p.hora).replace(/\s?[ap]\.?\s?m\.?/i,""):"—")+'<small>'+(p.hora?(/p/i.test(h12(p.hora))?"p. m.":"a. m."):"sin hora")+'</small></div>'+
     '<div class="sp"><div class="q">'+esc(p.nombre||celB(p.cel))+'</div><div class="vend"><i style="background:'+v.color+'"></i>'+esc(v.nombre)+(modo==="ped"?' · <span style="color:var(--naranja);font-weight:700">'+(p.fecha===hoy()?"hoy":p.fecha===masDias(hoy(),1)?"mañana":esc(corto(p.fecha)))+'</span>':'')+'</div></div><div class="tot">'+plata(p.total)+'</div></div>'+
     '<div class="det"><b>'+esc(resumen(p))+'</b>'+(p.domicilio?' <span class="small">+ domicilio</span>':' <span class="small">· recoge</span>')+'</div>'+
-    (p.dir?'<div class="dir">'+esc(p.dir)+' · <a href="'+mapa(p.dir)+'" target="_blank" rel="noopener">Mapa</a></div>':'')+
+    ((p.dir||barrioDe(p))?'<div class="dir">'+(barrioDe(p)?'<b style="color:var(--tinta)">'+esc(barrioDe(p))+'</b>'+(comunaDe(p)?' <span class="pill p-az" style="padding:1px 7px">C'+comunaDe(p)+'</span>':'')+(p.dir?' · ':''):'')+esc(p.dir)+' · <a href="'+mapa([p.dir,barrioDe(p)].filter(Boolean).join(", "))+'" target="_blank" rel="noopener">Mapa</a></div>':'')+
     (p.nota?'<div class="dir">📝 '+esc(p.nota)+'</div>':'')+
     '<div class="meta">'+(hecho?'<span class="pill p-ok">✓ Entregado '+(p.entregado_en?hm(p.entregado_en):"")+'</span>':'<span class="pill p-pend">Por entregar</span>')+
     (p.pagado?'<span class="pill p-ok">Pagó · '+esc(p.medio)+'</span>':'<span class="pill p-debe">Cobrar '+plata(p.total)+(p.cuando_paga?' · '+esc(p.cuando_paga):'')+'</span>')+
@@ -436,12 +471,14 @@ function vEntregas(){
   if(!pend.length) h+='<div class="vacio" style="padding:20px"><b>Todo entregado 🙌</b></div>';
   const fechas=[...new Set(pend.map(p=>p.fecha))].sort();
   fechas.forEach(f=>{
-    const g=pend.filter(p=>p.fecha===f).sort((a,b)=>(a.hora||"99").localeCompare(b.hora||"99"));
+    const g=ordenarRuta(pend.filter(p=>p.fecha===f));
+    const lm=linkMaps(g); let ultC=null; const sinC=g.filter(p=>!comunaDe(p)).length;
     const sinAviso=g.filter(p=>!p.avisado_en).length, al=alistar(g);
     h+='<div class="grupo"><div class="gcab"><div class="sp"><b>'+esc(grupoTit(f))+'</b><div class="small">'+g.length+(g.length===1?" pedido":" pedidos")+' · '+plata(g.reduce((s,p)=>s+p.total,0))+'</div></div></div>'+
       (al?'<div class="small" style="color:var(--tinta);margin:2px 0 10px"><b>Alistar:</b> '+esc(al)+'</div>':'')+
+      '<div class="ruta">🧭 <b>Recorrido sugerido</b> saliendo de '+esc(S.config.partida_barrio||"Comuna 1")+': '+[...new Set(g.map(comunaDe).filter(Boolean))].map(c=>'Comuna '+c).join(" → ")+(sinC?' <span class="small">('+sinC+' sin barrio, al final)</span>':'')+(lm?'<a class="btn b-tin full" style="margin-top:8px;font-size:14px;padding:10px" href="'+lm+'" target="_blank" rel="noopener">Abrir ruta en Google Maps</a>':'')+'</div>'+
       '<div class="grid2" style="margin-bottom:10px"><button class="btn b-nar" style="font-size:14px;padding:11px 8px" data-a="avisar" data-f="'+f+'">🛵 Ya vamos'+(sinAviso?" · "+sinAviso:" ✓")+'</button><button class="btn b-bor" style="font-size:14px;padding:11px 8px" data-a="copiarlista" data-f="'+f+'">Copiar ruta</button></div>'+
-      g.map(p=>tarjeta(p,"ent")).join("")+'</div>';
+      g.map((p,i)=>{const c=comunaDe(p);let cab='';if(c!==ultC){ultC=c;cab='<div class="zcab">'+(c?'Comuna '+c+' · '+esc(ZONA[c]):'Sin barrio')+'</div>';}return cab+'<div class="nro">'+(i+1)+'</div>'+tarjeta(p,"ent");}).join("")+'</div>';
   });
   if(ent.length) h+='<div class="small" style="margin:18px 2px 8px;font-weight:700">YA ENTREGADOS</div>'+ent.slice(0,30).map(p=>tarjeta(p,"ent")).join("")+(ent.length>30?'<div class="small" style="text-align:center">y '+(ent.length-30)+' más (ver en Excel)</div>':'');
   h+='<button class="btn b-bor full" style="margin-top:12px" data-a="excel" data-r="todo">Descargar todo para Excel</button>';
@@ -477,6 +514,7 @@ function vCuentas(){
 function vAjustes(){
   const promo=mensajeVenta();
   return '<div class="card"><div class="fila"><span class="av" style="background:'+S.yo.color+';width:44px;height:44px;font-size:16px">'+iniciales(S.yo.nombre)+'</span><div class="sp"><b>'+esc(S.yo.nombre)+'</b><div class="small">Ve y edita todo junto con '+esc(S.perfiles.filter(p=>p.user_id!==S.yo.user_id).map(p=>p.nombre).join(", "))+'</div></div></div><div class="acts"><button class="btn b-sua" data-a="clave">Cambiar clave</button><button class="btn b-bor" data-a="salir">Salir</button></div></div>'+
+  '<div class="card"><h3>Punto de partida</h3><div class="muted">Desde aquí se arma el recorrido de las entregas.</div><label>Barrio</label><input id="a-barrio" autocomplete="off" value="'+esc(S.config.partida_barrio||"")+'"><div id="a-sug" class="chips" style="margin-top:6px"></div><label>Dirección (opcional)</label><input id="a-dir" placeholder="Ej. Pesquera La Magdalena, calle…" value="'+esc(S.config.partida_dir||"")+'"><div class="small" style="margin-top:6px">Comuna '+(S.config.partida_comuna||1)+' · '+esc(ZONA[S.config.partida_comuna||1])+'</div></div>'+
   '<div class="card"><h3>Precios</h3>'+prods().map(p=>'<label style="margin-top:8px">'+esc(p.nombre)+(p.unidad==="lb"?" · precio por libra":"")+'</label><input inputmode="numeric" data-precio="'+p.id+'" value="'+plata(p.precio)+'"><div class="small" style="margin-top:4px">'+esc(p.detalle)+'</div>').join("")+
     '<label>Domicilio</label><input inputmode="numeric" data-dom="1" value="'+plata(S.config.domicilio)+'"><div class="small" style="margin-top:8px">Los cambios solo aplican a pedidos nuevos.</div></div>'+
   '<div class="card"><h3>Mensaje de venta</h3><div style="white-space:pre-wrap;font-size:14px;background:var(--suave);border-radius:12px;padding:12px">'+esc(promo)+'</div><div class="acts"><button class="btn b-sua" data-a="copiarpromo">Copiar</button><a class="btn b-nar" target="_blank" rel="noopener" href="https://wa.me/?text='+encodeURIComponent(promo)+'">Enviar por WhatsApp</a></div></div>'+
@@ -528,7 +566,8 @@ function pintarForm(){
   '<label>Celular</label><input id="f-cel" inputmode="tel" autocomplete="off" placeholder="300 123 4567" value="'+esc(B.cel)+'">'+
   (k?'<div class="conocido">Ya compró: <b>'+esc(k.nombre||celB(k.cel))+'</b>'+(k.dir?' · '+esc(k.dir):'')+' <button class="chip" style="padding:4px 10px;font-size:12px;margin-left:4px" data-f="usar">Usar datos</button></div>':'')+
   '<label>Entrega</label><div class="chips"><button class="chip '+(B.conDom?"on":"")+'" data-dom="1">🛵 Domicilio +'+plata(S.config.domicilio)+'</button><button class="chip '+(!B.conDom?"on":"")+'" data-dom="0">Recoge</button></div>'+
-  (B.conDom?'<input id="f-dir" style="margin-top:8px" placeholder="Barrio, calle, casa" value="'+esc(B.dir)+'">':'')+
+  (B.conDom?'<label>Barrio</label><input id="f-barrio" autocomplete="off" placeholder="Escriba el barrio (ej. Galán, Primero de Mayo)" value="'+esc(B.barrio||"")+'"><div id="f-sug" class="chips" style="margin-top:6px"></div>'+(B.barrio&&B.comuna?'<div class="small" style="margin-top:6px">📍 Comuna '+B.comuna+' · '+esc(ZONA[B.comuna])+'</div>':'')+
+   '<label>Dirección</label><input id="f-dir" placeholder="Calle, carrera, casa, referencia" value="'+esc(B.dir)+'">':'')+
   '<label>Día</label><div class="chips">'+[[hoy(),"Hoy"],[masDias(hoy(),1),"Mañana"]].concat(sab>masDias(hoy(),1)?[[sab,"Sábado "+sab.slice(8).replace(/^0/,"")]]:[]).map(([f,t])=>'<button class="chip '+(B.fecha===f?"on":"")+'" data-fecha="'+f+'">'+t+'</button>').join("")+'</div><input id="f-fecha" type="date" min="'+hoy()+'" style="margin-top:8px" value="'+esc(B.fecha)+'">'+'<div class="small" style="margin-top:6px">Se entrega el <b style="color:var(--tinta)">'+esc(nomDia(B.fecha).toLowerCase())+'</b></div>'+
   '<label>Hora</label><div class="chips">'+["10:00","12:00","15:00","18:00"].map(h=>'<button class="chip '+(B.hora===h?"on":"")+'" data-hora="'+h+'">'+h12(h)+'</button>').join("")+'</div><input id="f-hora" type="time" style="margin-top:8px" value="'+esc(B.hora)+'">'+
   '<label>Pago</label><div class="chips">'+[["Efectivo","Pagó efectivo"],["Nequi","Pagó Nequi"],["","Paga al recibir"]].map(([m,t])=>'<button class="chip '+((B.pagado?B.medio:"")===m?"on":"")+'" data-pago="'+m+'">'+t+'</button>').join("")+'</div>'+
@@ -542,14 +581,15 @@ function pintarForm(){
 function leer(){const v=id=>{const e=$(id);return e?e.value:null;};
   if(v("#f-fecha")) B.fecha=v("#f-fecha");
   B.cel=v("#f-cel")??B.cel; if(v("#f-dir")!=null)B.dir=v("#f-dir"); B.hora=v("#f-hora")??B.hora; B.nombre=v("#f-nom")??B.nombre; B.nota=v("#f-nota")??B.nota;
-  if(v("#f-cuando")!=null)B.cuando_paga=v("#f-cuando"); const m=dig(v("#f-val")); B.manual=m?+m:null;}
+  if(v("#f-cuando")!=null)B.cuando_paga=v("#f-cuando");
+  if(v("#f-barrio")!=null){ const bb=v("#f-barrio").trim(); if(bb!==B.barrio){ B.barrio=bb; const m=LISTA_B.find(x=>norm(x.n)===norm(bb)); B.comuna=m?m.c:null; } } const m=dig(v("#f-val")); B.manual=m?+m:null;}
 async function guardarForm(otro){
   leer();
   if(!B.items.some(i=>i.cant>0)) return toast("Elija al menos un combo");
   if(dig(B.cel).length<7) return toast("Falta el celular");
-  if(B.conDom&&B.dir.trim().length<3) return toast("Falta la dirección");
+  if(B.conDom&&B.dir.trim().length<3&&!(B.barrio||"").trim()) return toast("Falta el barrio o la dirección");
   const nuevo=!S.pedidos.find(x=>x.id===B.id);
-  const p={id:B.id,fecha:B.fecha,vendedor:B.vendedor,cel:dig(B.cel),nombre:B.nombre.trim(),dir:B.conDom?B.dir.trim():"",hora:B.hora||"",items:B.items.filter(i=>i.cant>0),
+  const p={id:B.id,fecha:B.fecha,vendedor:B.vendedor,cel:dig(B.cel),nombre:B.nombre.trim(),dir:B.conDom?B.dir.trim():"",barrio:B.conDom?(B.barrio||"").trim():"",comuna:B.conDom?(B.comuna||null):null,hora:B.hora||"",items:B.items.filter(i=>i.cant>0),
     subtotal:subB(),domicilio:domB(),total:totB(),pagado:B.pagado,medio:B.pagado?B.medio:"",cuando_paga:B.pagado?"":B.cuando_paga||"",nota:B.nota||"",estado:B.estado||"pendiente",editado_por:S.yo.user_id};
   if(nuevo) p.creado=new Date().toISOString();
   const btn=document.querySelector('[data-f="guardar"]'); if(btn) btn.disabled=true;
@@ -572,6 +612,7 @@ $("#hoja").addEventListener("click",async e=>{
     const bq=t.closest("[data-menos]"); if(bq){leer();const i=B.items[+bq.dataset.menos];i.cant=Math.max(0,Math.round((i.cant-(+(bq.dataset.paso||1)))*100)/100);return re();}
     if(t.dataset.vend){leer();B.vendedor=t.dataset.vend;return re();}
     if(t.dataset.dom!=null&&t.closest(".hoja")){leer();B.conDom=t.dataset.dom==="1";return re();}
+    const bbar=t.closest("[data-barrio]"); if(bbar){leer();B.barrio=bbar.dataset.barrio;B.comuna=+bbar.dataset.com;return re();}
     const fb=t.closest("[data-fecha]"); if(fb){leer();B.fecha=fb.dataset.fecha;CALMES=null;return re();}
     if(t.dataset.cm){leer();const[y,m]=(CALMES||B.fecha).split("-").map(Number);CALMES=iso(new Date(y,m-1+(+t.dataset.cm),1));return re();}
     if(t.dataset.hora){leer();B.hora=t.dataset.hora;return re();}
@@ -581,7 +622,7 @@ $("#hoja").addEventListener("click",async e=>{
       case "guardar": return guardarForm(false);
       case "otro": return guardarForm(true);
       case "vercal": leer(); B.verCal=!B.verCal; return re();
-      case "usar": {leer();const k=conocido();if(k){B.nombre=B.nombre||k.nombre;if(k.dir){B.dir=B.dir||k.dir;}}return re();}
+      case "usar": {leer();const k=conocido();if(k){B.nombre=B.nombre||k.nombre;if(k.dir){B.dir=B.dir||k.dir;} if(k.barrio&&!B.barrio){B.barrio=k.barrio;B.comuna=k.comuna;}}return re();}
       case "borrar": {borrarBorrador(); const id=B.id;hoja('<h2>¿Borrar este pedido?</h2><div class="muted">Si se equivoca, lo recupera en Pedidos → Pedidos borrados.</div><div class="acts"><button class="btn b-sua" data-h="cerrar">No</button><button class="btn b-rojo" data-h="siborrar" data-id="'+id+'">Sí, borrar</button></div>');return;}
     }
     return;
@@ -611,6 +652,7 @@ $("#hoja").addEventListener("input",e=>{
   clearTimeout(guardarBorrador.t); guardarBorrador.t=setTimeout(()=>{ if(B){ leer(); guardarBorrador(); } },400);
   if(e.target.id==="f-val"){ leer(); const x=$("#f-tot"); if(x) x.textContent=plata(totB()); }
   if(e.target.id==="f-cel"){ const antes=!!conocido(); B.cel=e.target.value; if(antes!==!!conocido()&&!S.pedidos.find(x=>x.id===B.id)){ leer(); const sy=$("#hoja").scrollTop; pintarForm(); $("#hoja").scrollTop=sy; const i=$("#f-cel"); i.focus(); i.setSelectionRange(i.value.length,i.value.length);} }
+  if(e.target.id==="f-barrio"){ const r=buscarBarrio(e.target.value,6); $("#f-sug").innerHTML=r.map(b=>'<button class="chip" style="padding:7px 11px;font-size:13px" data-barrio="'+esc(b.n)+'" data-com="'+b.c+'">'+esc(b.n)+' <span style="color:var(--gris2)">· C'+b.c+'</span></button>').join(""); }
   if(e.target.id==="f-hora"){ B.hora=e.target.value; document.querySelectorAll("[data-hora]").forEach(c=>c.classList.toggle("on",c.dataset.hora===B.hora)); }
 });
 
@@ -627,7 +669,7 @@ function trasEntregar(p){
 let AVF=null;
 function siguienteAviso(f){
   if(f) AVF=f;
-  const l=filtrar(activos()).filter(p=>p.fecha===AVF).filter(p=>p.estado!=="entregado"&&!p.avisado_en).sort((a,b)=>(a.hora||"99").localeCompare(b.hora||"99"));
+  const l=ordenarRuta(filtrar(activos()).filter(p=>p.fecha===AVF&&p.estado!=="entregado"&&!p.avisado_en));
   if(!l.length) return hoja('<h2>Todos avisados ✓</h2><div class="muted">Ya les avisó a todos los clientes de '+esc(grupoTit(AVF).toLowerCase())+'.</div><button class="btn b-nar full" style="margin-top:14px" data-h="cerrar">Listo</button>');
   const p=l[0], m="Hola"+(primer(p)?" "+primer(p):"")+"! 🛵 Ya vamos para allá con su pedido: "+resumen(p)+"."+(p.pagado?" Ya está pagado.":" Total "+plata(p.total)+".")+" ¡Gracias por comprar Combos del Mar!";
   hoja('<h2>Avisar “ya vamos”</h2><div class="muted">Faltan '+l.length+'. Toque Enviar en WhatsApp, vuelva aquí y siga con el próximo.</div><div style="background:var(--suave);border-radius:12px;padding:12px;margin:12px 0"><b>'+esc(p.nombre||celB(p.cel))+'</b><div class="small">'+esc(p.dir)+'</div><div style="margin-top:6px;font-size:15px">'+esc(m)+'</div></div>'+
@@ -649,8 +691,8 @@ function excel(todo){
   const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([csv(l)],{type:"text/csv;charset=utf-8"})); a.download="combos-"+hoy()+".csv"; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500);
 }
 function ruta(f){
-  const l=filtrar(activos()).filter(p=>p.fecha===f).filter(p=>p.estado!=="entregado").sort((a,b)=>(a.hora||"99").localeCompare(b.hora||"99"));
-  return "🛵 RUTA "+nomDia(f).toUpperCase()+"\n\n"+l.map((p,i)=>(i+1)+". "+(p.hora?h12(p.hora):"Sin hora")+" · "+(p.nombre||celB(p.cel))+"\n   "+resumen(p)+"\n   📍 "+(p.dir||"Recoge")+"\n   📲 "+celB(p.cel)+" · "+(p.pagado?"Ya pagó":"Cobrar "+plata(p.total))).join("\n\n");
+  const l=ordenarRuta(filtrar(activos()).filter(p=>p.fecha===f&&p.estado!=="entregado"));
+  return "🛵 RUTA "+nomDia(f).toUpperCase()+"\n\n"+l.map((p,i)=>(i+1)+". "+(p.hora?h12(p.hora):"Sin hora")+" · "+(p.nombre||celB(p.cel))+"\n   "+resumen(p)+"\n   📍 "+([barrioDe(p)&&(barrioDe(p)+(comunaDe(p)?" (C"+comunaDe(p)+")":"")),p.dir].filter(Boolean).join(" · ")||"Recoge")+"\n   📲 "+celB(p.cel)+" · "+(p.pagado?"Ya pagó":"Cobrar "+plata(p.total))).join("\n\n");
 }
 async function clicMain(e){
   const pr=e.target.closest("[data-per]"); if(pr){S.per=pr.dataset.per;render();return;}
@@ -667,14 +709,18 @@ async function clicMain(e){
     case "excel": excel(a.dataset.r==="todo"); break;
     case "gasto": hoja('<h2>Compra o gasto</h2><div class="small">Queda a nombre de '+esc(S.yo.nombre)+' · hoy</div><label>¿En qué?</label><div class="chips">'+["Compra de salmón","Compra de camarón","Gasolina","Bolsas","Hielo"].map(x=>'<button class="chip" data-h="gtxt" data-v="'+x+'">'+x+'</button>').join("")+'</div><input id="g-d" style="margin-top:8px" placeholder="O escriba otro"><label>¿Cuánto?</label><input id="g-v" inputmode="numeric" placeholder="$0"><div class="acts"><button class="btn b-sua" data-h="cerrar">Cancelar</button><button class="btn b-nar" data-h="ggasto">Guardar</button></div>'); break;
     case "borrargasto": { const {error}=await sb.from("combos_gastos").delete().eq("id",id); if(error) return toast("No se pudo borrar"); S.gastos=S.gastos.filter(g=>g.id!==id); render(); break; }
+    case "partida": await guardarPartida({partida_barrio:a.dataset.b,partida_comuna:+a.dataset.c}); break;
     case "recuperar": try{ await cambiarPedido(id,{estado:"pendiente"}); toast("Pedido recuperado"); }catch(_){} break;
     case "copiarpromo": copiar(mensajeVenta()); break;
     case "clave": hoja('<h2>Cambiar clave</h2><label>Nueva clave (6 números)</label><input id="c-1" type="password" inputmode="numeric" maxlength="6"><label>Repítala</label><input id="c-2" type="password" inputmode="numeric" maxlength="6"><div class="acts"><button class="btn b-sua" data-h="cerrar">Cancelar</button><button class="btn b-nar" data-h="gclave">Guardar</button></div>'); break;
     case "salir": if(canal) sb.removeChannel(canal); await sb.auth.signOut(); ELEGIDO=null; pantallaLogin(); break;
   }
 }
+$("#root").addEventListener("input",e=>{ if(e.target.id==="a-barrio"){ const r=buscarBarrio(e.target.value,6); const box=$("#a-sug"); if(box) box.innerHTML=r.map(b=>'<button class="chip" style="padding:7px 11px;font-size:13px" data-a="partida" data-b="'+esc(b.n)+'" data-c="'+b.c+'">'+esc(b.n)+' · C'+b.c+'</button>').join(""); } });
+async function guardarPartida(campos){ const {error}=await sb.from("combos_config").update(campos).eq("id",1); if(error) return toast("No se guardó"); Object.assign(S.config,campos); render(); toast("Punto de partida guardado"); }
 async function cambioMain(e){
   const t=e.target;
+  if(t.id==="a-dir"){ const v=t.value.trim(); if(v!==S.config.partida_dir) await guardarPartida({partida_dir:v}); return; }
   if(t.dataset.compra){ const c=S.compras.find(x=>x.fecha===S.dia&&x.producto===t.dataset.compra)||{fecha:S.dia,producto:t.dataset.compra,cant:0,costo:0};
     const n={...c,[t.dataset.k]:+dig(t.value)||0}; const {error}=await sb.from("combos_compras").upsert(n); if(error) return toast("No se guardó");
     const i=S.compras.findIndex(x=>x.fecha===n.fecha&&x.producto===n.producto); if(i>=0)S.compras[i]=n; else S.compras.push(n); render(); toast("Guardado"); }
