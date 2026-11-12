@@ -187,6 +187,9 @@ table.t tr:last-child td{border-bottom:0}
 .tmenos{border:0;background:var(--suave);border-radius:10px;padding:8px;font-weight:600;font-size:13px;color:var(--gris)}
 .suma{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--naranja2);border-radius:12px;padding:10px 12px;margin-top:10px;font-size:14px;font-weight:600;color:#8A3F10}
 .suma b{font-size:18px;color:var(--tinta)}
+.tlb{position:absolute;left:8px;bottom:8px;background:rgba(31,29,26,.75);color:#fff;font-size:10px;font-weight:800;letter-spacing:.06em;border-radius:6px;padding:3px 6px}
+.tp small{font-size:12px;color:var(--gris);font-weight:600}
+.medias{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 </style>
 </head>
 <body>
@@ -228,8 +231,11 @@ const hm=ts=>new Date(ts).toLocaleTimeString("es-CO",{hour:"numeric",minute:"2-d
 const h12=h=>{if(!h)return"";const[a,b]=h.split(":").map(Number);const d=new Date();d.setHours(a,b,0,0);return hm(d);};
 const nomDia=f=>{const[y,m,d]=f.split("-").map(Number);const t=new Date(y,m-1,d).toLocaleDateString("es-CO",{weekday:"long",day:"numeric",month:"long"});return t.charAt(0).toUpperCase()+t.slice(1);};
 const corto=f=>{const[y,m,d]=f.split("-").map(Number);return new Date(y,m-1,d).toLocaleDateString("es-CO",{weekday:"short",day:"numeric",month:"short"}).replace(/\./g,"");};
-const cuantos=p=>(p.items||[]).reduce((s,i)=>s+(+i.cant||0),0);
-const resumen=p=>(p.items||[]).filter(i=>i.cant>0).map(i=>i.cant+"× "+i.nombre.replace(/^Combo /,"")).join(" · ");
+const esLb=i=>i.unidad==="lb"||/-lb$/.test(i.id||"");
+const fmtLb=n=>(+n).toLocaleString("es-CO",{maximumFractionDigits:2})+" lb";
+const cantTxt=i=>esLb(i)?fmtLb(i.cant):i.cant+"×";
+const cuantos=p=>(p.items||[]).filter(i=>!esLb(i)).reduce((s,i)=>s+(+i.cant||0),0);
+const resumen=p=>(p.items||[]).filter(i=>i.cant>0).map(i=>esLb(i)?fmtLb(i.cant)+" de "+i.nombre:i.cant+"× "+i.nombre.replace(/^Combo /,"")).join(" · ");
 const primer=p=>(p.nombre||"").trim().split(" ")[0];
 const iniciales=n=>(n||"?").split(" ").map(x=>x[0]).join("").slice(0,2).toUpperCase();
 const perfil=id=>S.perfiles.find(p=>p.user_id===id)||{nombre:"—",color:"#A39E95"};
@@ -394,11 +400,12 @@ function vEntregas(){
   const l=delDia(S.dia).sort((a,b)=>(a.hora||"99").localeCompare(b.hora||"99"));
   const pend=l.filter(p=>p.estado!=="entregado"), ent=l.filter(p=>p.estado==="entregado").sort((a,b)=>new Date(b.entregado_en)-new Date(a.entregado_en));
   const cobrar=pend.filter(p=>!p.pagado).reduce((s,p)=>s+p.total,0);
-  let h='<div class="grid3" style="margin-bottom:12px"><div class="kpi"><div class="l">Faltan</div><div class="v">'+pend.length+'</div><div class="s">'+pend.reduce((s,p)=>s+cuantos(p),0)+' combos</div></div><div class="kpi"><div class="l">Por cobrar</div><div class="v">'+plata(cobrar)+'</div></div><div class="kpi"><div class="l">Entregados</div><div class="v">'+ent.length+'</div><div class="s">'+ent.reduce((s,p)=>s+cuantos(p),0)+' combos</div></div></div>';
+  let h='<div class="grid3" style="margin-bottom:12px"><div class="kpi"><div class="l">Faltan</div><div class="v">'+pend.length+'</div><div class="s">'+(n=>n+(n===1?" combo":" combos"))(pend.reduce((s,p)=>s+cuantos(p),0))+'</div></div><div class="kpi"><div class="l">Por cobrar</div><div class="v">'+plata(cobrar)+'</div></div><div class="kpi"><div class="l">Entregados</div><div class="v">'+ent.length+'</div><div class="s">'+(n=>n+(n===1?" combo":" combos"))(ent.reduce((s,p)=>s+cuantos(p),0))+'</div></div></div>';
   if(!l.length) return h+'<div class="vacio"><b>Nada por entregar</b>Los pedidos de este día aparecen aquí, ordenados por hora.</div>';
   // alistar
-  let sal=0,cam=0; pend.forEach(p=>(p.items||[]).forEach(i=>{const g=GRAMOS[i.id];if(g){sal+=g.sal*i.cant;cam+=g.cam*i.cant;}}));
-  if(pend.length) h+='<div class="card" style="padding:12px 16px"><div class="fila"><div class="sp"><div class="small">Para alistar</div><div style="font-weight:700">'+sal+' filetes de salmón · '+(cam>=1000?(cam/1000).toLocaleString("es-CO")+" kg":cam+" g")+' de camarón</div></div></div></div>';
+  let sal=0,cam=0,salLb=0,camLb=0; pend.forEach(p=>(p.items||[]).forEach(i=>{const g=GRAMOS[i.id];if(g){sal+=g.sal*i.cant;cam+=g.cam*i.cant;} else if(i.id==="salmon-lb")salLb+=i.cant; else if(i.id==="camaron-lb")camLb+=i.cant;}));
+  const al=[]; if(sal)al.push(sal+(sal===1?" filete":" filetes")+" de salmón (combos)"); if(salLb)al.push(fmtLb(salLb)+" de salmón"); if(cam)al.push((cam>=1000?(cam/1000).toLocaleString("es-CO")+" kg":cam+" g")+" de camarón (combos)"); if(camLb)al.push(fmtLb(camLb)+" de camarón");
+  if(pend.length&&al.length) h+='<div class="card" style="padding:12px 16px"><div class="small">Para alistar</div><div style="font-weight:700;line-height:1.5">'+al.join("<br>")+'</div></div>';
   const sinAviso=pend.filter(p=>!p.avisado_en).length;
   if(pend.length) h+='<button class="btn b-nar full" data-a="avisar" style="margin-bottom:8px">🛵 Avisar “ya vamos” · '+(sinAviso?"faltan "+sinAviso:"todos avisados")+'</button>';
   h+='<div class="grid2" style="margin-bottom:14px"><button class="btn b-bor" data-a="copiarlista">Copiar ruta</button><button class="btn b-bor" data-a="excel">Descargar Excel</button></div>';
@@ -426,10 +433,10 @@ function vCuentas(){
     '<div class="kpi"><div class="l">Ganancia</div><div class="v" style="color:'+(gan>=0?"var(--verde)":"var(--rojo)")+'">'+plata(gan)+'</div><div class="s">'+(usaCompra?(totC?"ventas − compra − gastos":"anote la compra abajo"):"ventas − sus gastos")+'</div></div></div>';
   h+='<div class="card"><h3>Plata</h3>'+barra([[ef,"var(--verde)","Efectivo",plata(ef)],[nq,"var(--azul)","Nequi",plata(nq)],[pe,"var(--rojo)","Debe",plata(pe)]])+'</div>';
   // combos
-  h+='<div class="card"><h3>Combos</h3>'+prods().map(pr=>{const e=l.filter(p=>p.estado==="entregado").reduce((s,p)=>s+(p.items||[]).filter(i=>i.id===pr.id).reduce((a,i)=>a+i.cant,0),0),f=l.filter(p=>p.estado!=="entregado").reduce((s,p)=>s+(p.items||[]).filter(i=>i.id===pr.id).reduce((a,i)=>a+i.cant,0),0),c=compras.find(x=>x.producto===pr.id);
-    return '<div style="margin-bottom:12px"><div class="fila"><b class="sp">'+esc(pr.nombre)+'</b>'+(c&&c.cant&&usaCompra?'<span class="small">quedan '+Math.max(c.cant-e-f,0)+' de '+c.cant+'</span>':'')+'</div>'+barra([[e,"var(--naranja)","Entregados"],[f,"var(--linea)","Por entregar"]])+'</div>';}).join("")+'</div>';
+  h+='<div class="card"><h3>Productos</h3>'+prods().map(pr=>{const e=l.filter(p=>p.estado==="entregado").reduce((s,p)=>s+(p.items||[]).filter(i=>i.id===pr.id).reduce((a,i)=>a+i.cant,0),0),f=l.filter(p=>p.estado!=="entregado").reduce((s,p)=>s+(p.items||[]).filter(i=>i.id===pr.id).reduce((a,i)=>a+i.cant,0),0),c=compras.find(x=>x.producto===pr.id);
+    const u=pr.unidad==="lb"; return '<div style="margin-bottom:12px"><div class="fila"><b class="sp">'+esc(pr.nombre)+(u?' <span class="small">(libras)</span>':'')+'</b>'+(c&&c.cant&&usaCompra?'<span class="small">quedan '+Math.max(c.cant-e-f,0)+' de '+c.cant+'</span>':'')+'</div>'+barra([[e,"var(--naranja)","Entregados"],[f,"var(--linea)","Por entregar"]])+'</div>';}).join("")+'</div>';
   // compra (compartida)
-  h+='<div class="card"><h3>Compra del día <span class="small" style="font-weight:500">· de los dos</span></h3>'+prods().map(pr=>{const c=compras.find(x=>x.producto===pr.id)||{};return '<div class="small" style="font-weight:700;color:var(--tinta);margin-top:6px">'+esc(pr.nombre)+'</div><div class="grid2" style="margin-top:6px"><input inputmode="numeric" placeholder="Cuántos" data-compra="'+pr.id+'" data-k="cant" value="'+(c.cant||"")+'"><input inputmode="numeric" placeholder="Costo c/u" data-compra="'+pr.id+'" data-k="costo" value="'+(c.costo?plata(c.costo):"")+'"></div>';}).join("")+
+  h+='<div class="card"><h3>Compra del día <span class="small" style="font-weight:500">· de los dos</span></h3>'+prods().map(pr=>{const c=compras.find(x=>x.producto===pr.id)||{};return '<div class="small" style="font-weight:700;color:var(--tinta);margin-top:6px">'+esc(pr.nombre)+'</div><div class="grid2" style="margin-top:6px"><input inputmode="numeric" placeholder="'+(pr.unidad==="lb"?"Libras":"Cuántos")+'" data-compra="'+pr.id+'" data-k="cant" value="'+(c.cant||"")+'"><input inputmode="numeric" placeholder="'+(pr.unidad==="lb"?"Costo por lb":"Costo c/u")+'" data-compra="'+pr.id+'" data-k="costo" value="'+(c.costo?plata(c.costo):"")+'"></div>';}).join("")+
     (totC?'<div class="lin" style="margin-top:8px"><span>Total compra</span><b>'+plata(totC)+'</b></div>':'')+'</div>';
   // gastos
   h+='<div class="card"><h3>Gastos</h3>'+(gastos.length?gastos.map(g=>'<div class="lin"><span class="sp">'+esc(g.descripcion)+' <span class="vend"><i style="background:'+perfil(g.vendedor).color+'"></i>'+esc(perfil(g.vendedor).nombre.split(" ")[0])+'</span></span><b style="margin-right:8px">'+plata(g.valor)+'</b><button class="x" data-a="borrargasto" data-id="'+g.id+'">×</button></div>').join(""):'<div class="muted">Sin gastos.</div>')+
@@ -446,7 +453,7 @@ function vCuentas(){
 function vAjustes(){
   const promo=mensajeVenta();
   return '<div class="card"><div class="fila"><span class="av" style="background:'+S.yo.color+';width:44px;height:44px;font-size:16px">'+iniciales(S.yo.nombre)+'</span><div class="sp"><b>'+esc(S.yo.nombre)+'</b><div class="small">Ve y edita todo junto con '+esc(S.perfiles.filter(p=>p.user_id!==S.yo.user_id).map(p=>p.nombre).join(", "))+'</div></div></div><div class="acts"><button class="btn b-sua" data-a="clave">Cambiar clave</button><button class="btn b-bor" data-a="salir">Salir</button></div></div>'+
-  '<div class="card"><h3>Precios</h3>'+prods().map(p=>'<label style="margin-top:8px">'+esc(p.nombre)+'</label><input inputmode="numeric" data-precio="'+p.id+'" value="'+plata(p.precio)+'"><div class="small" style="margin-top:4px">'+esc(p.detalle)+'</div>').join("")+
+  '<div class="card"><h3>Precios</h3>'+prods().map(p=>'<label style="margin-top:8px">'+esc(p.nombre)+(p.unidad==="lb"?" · precio por libra":"")+'</label><input inputmode="numeric" data-precio="'+p.id+'" value="'+plata(p.precio)+'"><div class="small" style="margin-top:4px">'+esc(p.detalle)+'</div>').join("")+
     '<label>Domicilio</label><input inputmode="numeric" data-dom="1" value="'+plata(S.config.domicilio)+'"><div class="small" style="margin-top:8px">Los cambios solo aplican a pedidos nuevos.</div></div>'+
   '<div class="card"><h3>Mensaje de venta</h3><div style="white-space:pre-wrap;font-size:14px;background:var(--suave);border-radius:12px;padding:12px">'+esc(promo)+'</div><div class="acts"><button class="btn b-sua" data-a="copiarpromo">Copiar</button><a class="btn b-nar" target="_blank" rel="noopener" href="https://wa.me/?text='+encodeURIComponent(promo)+'">Enviar por WhatsApp</a></div></div>'+
   '<div class="card"><h3>Mensaje de gracias</h3><textarea id="gracias" rows="3">'+esc(S.config.gracias)+'</textarea><div class="small" style="margin-top:6px">Así llega: Hola Ana, '+esc(S.config.gracias)+'</div></div>'+
@@ -454,7 +461,9 @@ function vAjustes(){
 }
 function mensajeVenta(){
   const [a,b]=prods();
-  return "🌊🦐 *¡DISFRUTA EL SABOR DEL MAR!* 🍣\n\n"+prods().map((p,i)=>(i===0?"🔥":"❤️")+" *"+p.nombre.toUpperCase()+" – "+plata(p.precio)+"*\n"+p.detalle.split(" + ").map(x=>(/salm/i.test(x)?"🐟 ":"🦐 ")+x.charAt(0).toUpperCase()+x.slice(1)).join("\n")).join("\n\n")+
+  const lb=prods().filter(p=>p.unidad==="lb");
+  return "🌊🦐 *¡DISFRUTA EL SABOR DEL MAR!* 🍣\n\n"+prods().filter(p=>p.unidad!=="lb").map((p,i)=>(i===0?"🔥":"❤️")+" *"+p.nombre.toUpperCase()+" – "+plata(p.precio)+"*\n"+p.detalle.split(" + ").map(x=>(/salm/i.test(x)?"🐟 ":"🦐 ")+x.charAt(0).toUpperCase()+x.slice(1)).join("\n")).join("\n\n")+
+   (lb.length?"\n\n🛒 *TAMBIÉN POR LIBRA:*\n"+lb.map(p=>(/salm/i.test(p.nombre)?"🐟 ":"🦐 ")+p.nombre+": *"+plata(p.precio)+" la libra*").join("\n"):"")+
    "\n\n✨ Porcionados y listos para cocinar.\n\n🛵 *Domicilio: "+plata(S.config.domicilio)+" adicionales.*\n\n📲 Pedidos: *"+WA_NEGOCIO+"*\n\n¡Reserva el tuyo! Por encargo y hasta agotar existencias.";
 }
 
@@ -470,11 +479,11 @@ function abrirPedido(p,forzarNuevo){
   if(!p&&!forzarNuevo){ const d=leerBorrador(); if(d&&d.items){ B=d; pintarForm(); abrir(); toast("Recuperé el pedido que estaba escribiendo"); return; } }
   if(p){ B=JSON.parse(JSON.stringify(p)); B.conDom=!!p.domicilio; B.domVal=p.domicilio||0; B.manual=p.subtotal+(p.domicilio||0)!==p.total?p.total:null; }
   else B={id:crypto.randomUUID(),fecha:S.dia<hoy()?hoy():S.dia,vendedor:S.yo.user_id,cel:"",nombre:"",dir:"",hora:"",items:[],pagado:false,medio:"",cuando_paga:"",nota:"",estado:"pendiente",conDom:true,manual:null};
-  prods().forEach(pr=>{ if(!B.items.find(i=>i.id===pr.id)) B.items.push({id:pr.id,nombre:pr.nombre,precio:pr.precio,cant:0}); });
+  prods().forEach(pr=>{ if(!B.items.find(i=>i.id===pr.id)) B.items.push({id:pr.id,nombre:pr.nombre,precio:pr.precio,unidad:pr.unidad||"combo",cant:0}); });
   if(!p&&!B.items.some(i=>i.cant)) {}
   pintarForm(); abrir();
 }
-const subB=()=>B.items.reduce((s,i)=>s+i.precio*i.cant,0);
+const subB=()=>Math.round(B.items.reduce((s,i)=>s+i.precio*i.cant,0));
 const domB=()=>B.conDom?(B.domVal||S.config.domicilio):0;
 const totB=()=>B.manual!=null?B.manual:subB()+domB();
 function conocido(){const c=dig(B.cel);if(c.length<10)return null;return S.pedidos.filter(p=>dig(p.cel)===c&&p.id!==B.id).sort((a,b)=>new Date(b.creado)-new Date(a.creado))[0]||null;}
@@ -489,8 +498,9 @@ function calendario(){
 function pintarForm(){
   const nuevo=!S.pedidos.find(x=>x.id===B.id), k=nuevo?conocido():null, sab=proxSabado();
   $("#hoja").innerHTML='<div class="asa"></div><h2>'+(nuevo?"Nuevo pedido":"Editar pedido")+'</h2><div class="small">Vende: '+S.perfiles.map(p=>'<button class="chip '+(B.vendedor===p.user_id?"on":"")+'" style="padding:4px 10px;font-size:12px;margin-left:4px" data-vend="'+p.user_id+'">'+esc(p.nombre.split(" ")[0])+'</button>').join("")+'</div>'+
-  '<label>Toque el combo para agregarlo · cada toque suma uno</label><div class="tiles">'+B.items.map((i,n)=>'<div class="tile'+(i.cant?" sel":"")+'"><button class="tilebtn" data-mas="'+n+'" aria-label="Agregar '+esc(i.nombre)+'"><span class="tim"><img src="img/'+esc(i.id)+'.jpg" alt="" onerror="this.style.display=\'none\'">'+(i.cant?'<span class="tc" id="tc'+n+'">'+i.cant+'</span>':'')+'</span><span class="tn">'+esc(i.nombre.replace(/^Combo /,""))+'</span><span class="tp">'+plata(i.precio)+'</span></button>'+(i.cant?'<button class="tmenos" data-menos="'+n+'">− Quitar uno</button>':'')+'</div>').join("")+'</div>'+
-  (subB()?'<div class="suma"><span>'+B.items.filter(i=>i.cant).map(i=>i.cant+"× "+esc(i.nombre.replace(/^Combo /,""))).join(" + ")+'</span><b>'+plata(subB())+'</b></div>':'')+
+  '<label>Toque para agregar · cada toque suma uno (o 1 libra)</label><div class="tiles">'+B.items.map((i,n)=>'<div class="tile'+(i.cant?" sel":"")+'"><button class="tilebtn" data-mas="'+n+'" aria-label="Agregar '+esc(i.nombre)+'"><span class="tim"><img src="img/'+esc(i.id)+'.jpg" alt="" onerror="this.style.display=\'none\'">'+(esLb(i)?'<span class="tlb">POR LIBRA</span>':'')+(i.cant?'<span class="tc" id="tc'+n+'">'+(esLb(i)?fmtLb(i.cant):i.cant)+'</span>':'')+'</span><span class="tn">'+esc(i.nombre.replace(/^Combo /,""))+'</span><span class="tp">'+plata(i.precio)+(esLb(i)?' <small>/ lb</small>':'')+'</span></button>'+
+    (i.cant?(esLb(i)?'<div class="medias"><button class="tmenos" data-menos="'+n+'" data-paso="0.5">− ½ lb</button><button class="tmenos" data-mas="'+n+'" data-paso="0.5">+ ½ lb</button></div>':'<button class="tmenos" data-menos="'+n+'">− Quitar uno</button>'):'')+'</div>').join("")+'</div>'+
+  (subB()?'<div class="suma"><span>'+B.items.filter(i=>i.cant).map(i=>esLb(i)?fmtLb(i.cant)+" "+esc(i.nombre):i.cant+"× "+esc(i.nombre.replace(/^Combo /,""))).join(" + ")+'</span><b>'+plata(subB())+'</b></div>':'')+
   '<label>Celular</label><input id="f-cel" inputmode="tel" autocomplete="off" placeholder="300 123 4567" value="'+esc(B.cel)+'">'+
   (k?'<div class="conocido">Ya compró: <b>'+esc(k.nombre||celB(k.cel))+'</b>'+(k.dir?' · '+esc(k.dir):'')+' <button class="chip" style="padding:4px 10px;font-size:12px;margin-left:4px" data-f="usar">Usar datos</button></div>':'')+
   '<label>Entrega</label><div class="chips"><button class="chip '+(B.conDom?"on":"")+'" data-dom="1">🛵 Domicilio +'+plata(S.config.domicilio)+'</button><button class="chip '+(!B.conDom?"on":"")+'" data-dom="0">Recoge</button></div>'+
@@ -532,8 +542,8 @@ $("#hoja").addEventListener("click",async e=>{
   const t=e.target;
   if(B){
     const sy=$("#hoja").scrollTop, re=()=>{pintarForm();$("#hoja").scrollTop=sy;guardarBorrador();};
-    const bm=t.closest("[data-mas]"); if(bm){leer();const n=+bm.dataset.mas;B.items[n].cant++;re();const c=$("#tc"+n);if(c){c.classList.remove("pop");void c.offsetWidth;c.classList.add("pop");}try{navigator.vibrate&&navigator.vibrate(15);}catch(_){}return;}
-    const bq=t.closest("[data-menos]"); if(bq){leer();const i=B.items[+bq.dataset.menos];if(i.cant>0)i.cant--;return re();}
+    const bm=t.closest("[data-mas]"); if(bm){leer();const n=+bm.dataset.mas;B.items[n].cant=Math.round((B.items[n].cant+(+(bm.dataset.paso||1)))*100)/100;re();const c=$("#tc"+n);if(c){c.classList.remove("pop");void c.offsetWidth;c.classList.add("pop");}try{navigator.vibrate&&navigator.vibrate(15);}catch(_){}return;}
+    const bq=t.closest("[data-menos]"); if(bq){leer();const i=B.items[+bq.dataset.menos];i.cant=Math.max(0,Math.round((i.cant-(+(bq.dataset.paso||1)))*100)/100);return re();}
     if(t.dataset.vend){leer();B.vendedor=t.dataset.vend;return re();}
     if(t.dataset.dom!=null&&t.closest(".hoja")){leer();B.conDom=t.dataset.dom==="1";return re();}
     const fb=t.closest("[data-fecha]"); if(fb){leer();B.fecha=fb.dataset.fecha;CALMES=null;return re();}
