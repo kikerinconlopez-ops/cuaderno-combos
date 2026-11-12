@@ -192,6 +192,13 @@ table.t tr:last-child td{border-bottom:0}
 .medias{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .otros{display:flex;flex-wrap:wrap;align-items:center;gap:6px;background:var(--azul2);border-radius:14px;padding:10px 12px;margin-bottom:12px}
 .otros .chip{padding:6px 11px;font-size:13px;border-color:transparent}
+.grupo{margin-bottom:18px}
+.gcab{display:flex;align-items:center;gap:8px;padding:4px 2px 6px;border-bottom:2px solid var(--naranja);margin-bottom:8px}
+.gcab b{font-size:17px}
+.ptotal{background:var(--tinta);color:#fff;border-radius:16px;padding:12px 14px;margin-bottom:14px}
+.ptotal .l{font-size:12px;color:#C9C3B8;font-weight:600}.ptotal .v{font-size:22px;font-weight:800;letter-spacing:-.03em}.ptotal .s{font-size:12px;color:#C9C3B8}
+.pdos{display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.15);font-size:13px;color:#E8E3DA}
+.pdos span{display:inline-flex;align-items:center;gap:6px}.pdos i{width:8px;height:8px;border-radius:50%}.pdos b{color:#fff}
 </style>
 </head>
 <body>
@@ -215,7 +222,7 @@ const sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,a
 
 /* ============ estado ============ */
 const S={yo:null,perfiles:[],productos:[],pedidos:[],gastos:[],compras:[],config:{gracias:"",domicilio:3000},
-  tab:"entregas",dia:null,quien:"todos",vivo:false,cargado:false};
+  tab:"entregas",dia:null,per:"semana",quien:"todos",vivo:false,cargado:false};
 
 /* ============ utilidades ============ */
 const $=s=>document.querySelector(s);
@@ -290,8 +297,8 @@ async function entrar(user){
   $("#root").innerHTML='<div class="vacio" style="padding-top:40vh">Cargando…</div>';
   try{ await cargarTodo(); }catch(e){ console.error(e); $("#root").innerHTML='<div class="login"><h1>No se pudo cargar</h1><div class="muted">Revise el internet e intente de nuevo.</div><button class="btn b-nar full" style="margin-top:20px" onclick="location.reload()">Reintentar</button><button class="btn b-sua full" style="margin-top:10px" id="salir0">Salir</button></div>'; $("#salir0").onclick=()=>sb.auth.signOut(); return; }
   S.yo=S.perfiles.find(p=>p.user_id===user.id);
+  if(S.yo) S.quien=S.yo.user_id;
   if(!S.yo){ await sb.auth.signOut(); ELEGIDO=null; pantallaLogin(); return; }
-  if(!S.dia){ S.dia = activos().some(p=>p.fecha===hoy()&&p.estado!=="entregado") ? hoy() : (activos().filter(p=>p.fecha>hoy()&&p.estado!=="entregado").map(p=>p.fecha).sort()[0]||hoy()); }
   montar(); escuchar();
 }
 async function cargarTodo(){
@@ -341,13 +348,10 @@ async function cambiarPedido(id,campos){
 function montar(){
   $("#root").innerHTML='<div class="app"><div class="top"><div class="marca"><b>Combos del Mar</b><span><i class="vivo no" id="vivo"></i><span id="vivotx">Conectando…</span></span></div>'+
     '<button class="yo" id="yo"><span class="av" style="background:'+S.yo.color+'">'+iniciales(S.yo.nombre)+'</span>'+esc(S.yo.nombre.split(" ")[0])+'</button></div>'+
-    '<div class="dia"><button class="flecha" id="ant">‹</button><button class="f" id="fecha"></button><button class="flecha" id="sig">›</button></div>'+
+
     '<div class="seg" id="seg"></div><main id="main"></main></div>'+
     '<nav class="nav"><div class="in"><button class="t" data-t="pedidos">'+ICON.ped+'Pedidos</button><button class="t" data-t="entregas">'+ICON.ent+'Entregas<span class="badge" id="bdg" style="display:none"></span></button>'+
     '<button class="mas" id="mas" aria-label="Anotar pedido">+</button><button class="t" data-t="cuentas">'+ICON.cue+'Cuentas</button><button class="t" data-t="ajustes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Ajustes</button></div></nav>';
-  $("#ant").onclick=()=>{S.dia=masDias(S.dia,-1);render();};
-  $("#sig").onclick=()=>{S.dia=masDias(S.dia,1);render();};
-  $("#fecha").onclick=()=>hojaDia();
   $("#yo").onclick=()=>{S.tab="ajustes";render();};
   $("#mas").onclick=()=>abrirPedido();
   document.querySelectorAll(".nav .t").forEach(b=>b.onclick=()=>{S.tab=b.dataset.t;render();window.scrollTo(0,0);});
@@ -358,20 +362,14 @@ function montar(){
 function pintarVivo(){ const v=$("#vivo"),t=$("#vivotx"); if(!v)return; v.classList.toggle("no",!S.vivo); t.textContent=S.vivo?"En vivo · se guarda solo":"Sin conexión en vivo"; }
 function render(){
   if(!$("#main")) return;
-  const f=$("#fecha"); const et=S.dia===hoy()?"HOY":S.dia===masDias(hoy(),1)?"MAÑANA":"";
-  f.innerHTML=esc(nomDia(S.dia))+(et?'<small>'+et+'</small>':"");
   $("#seg").innerHTML=[["todos","Todos"],...S.perfiles.map(p=>[p.user_id,p.user_id===S.yo.user_id?"Yo":p.nombre.split(" ")[0]])].map(([k,t])=>'<button data-q="'+k+'" class="'+(S.quien===k?"on":"")+'">'+esc(t)+'</button>').join("");
   $("#seg").onclick=e=>{const b=e.target.closest("[data-q]");if(b){S.quien=b.dataset.q;render();}};
-  $("#seg").style.display=S.tab==="ajustes"?"none":"flex";
-  document.querySelector(".dia").style.display=S.tab==="ajustes"?"none":"flex";
+  $("#seg").style.display="none";
   document.querySelectorAll(".nav .t").forEach(b=>b.classList.toggle("on",b.dataset.t===S.tab));
-  const pend=activos().filter(p=>p.fecha===S.dia&&p.estado!=="entregado").length, bd=$("#bdg");
+  const pend=activos().filter(p=>p.estado!=="entregado").length, bd=$("#bdg");
   bd.style.display=pend?"":"none"; bd.textContent=pend;
   const bor=leerBorrador(), hayB=bor&&bor.items&&!B;
-  const otros={}; filtrar(activos()).filter(p=>p.fecha>=hoy()&&p.fecha!==S.dia&&p.estado!=="entregado").forEach(p=>otros[p.fecha]=(otros[p.fecha]||0)+1);
-  const ko=Object.keys(otros).sort();
-  const franja=ko.length&&S.tab!=="ajustes"?'<div class="otros"><span class="small" style="font-weight:700">Pedidos en otros días:</span>'+ko.map(f=>'<button class="chip" data-irdia="'+f+'">'+esc(corto(f))+' · '+otros[f]+'</button>').join("")+'</div>':'';
-  $("#main").innerHTML=franja+(hayB?'<button class="aviso" data-a="nuevo" style="width:100%;border:0;text-align:left;font-weight:600">✏️ Tiene un pedido sin guardar'+(bor.nombre||bor.cel?' ('+esc(bor.nombre||celB(bor.cel))+')':'')+' · <u>continuar</u></button>':'')+({pedidos:vPedidos,entregas:vEntregas,cuentas:vCuentas,ajustes:vAjustes})[S.tab]();
+  $("#main").innerHTML=(S.tab!=="ajustes"?panelTotal():'')+(hayB?'<button class="aviso" data-a="nuevo" style="width:100%;border:0;text-align:left;font-weight:600">✏️ Tiene un pedido sin guardar'+(bor.nombre||bor.cel?' ('+esc(bor.nombre||celB(bor.cel))+')':'')+' · <u>continuar</u></button>':'')+({pedidos:vPedidos,entregas:vEntregas,cuentas:vCuentas,ajustes:vAjustes})[S.tab]();
   pintarVivo();
 }
 
@@ -379,7 +377,7 @@ function render(){
 function tarjeta(p,modo){
   const v=perfil(p.vendedor), hecho=p.estado==="entregado";
   let h='<div class="ped'+(hecho&&modo==="ent"?" hecho":"")+'"><div class="cab"><div class="hr">'+(p.hora?h12(p.hora).replace(/\s?[ap]\.?\s?m\.?/i,""):"—")+'<small>'+(p.hora?(/p/i.test(h12(p.hora))?"p. m.":"a. m."):"sin hora")+'</small></div>'+
-    '<div class="sp"><div class="q">'+esc(p.nombre||celB(p.cel))+'</div><div class="vend"><i style="background:'+v.color+'"></i>'+esc(v.nombre)+'</div></div><div class="tot">'+plata(p.total)+'</div></div>'+
+    '<div class="sp"><div class="q">'+esc(p.nombre||celB(p.cel))+'</div><div class="vend"><i style="background:'+v.color+'"></i>'+esc(v.nombre)+(modo==="ped"?' · <span style="color:var(--naranja);font-weight:700">'+(p.fecha===hoy()?"hoy":p.fecha===masDias(hoy(),1)?"mañana":esc(corto(p.fecha)))+'</span>':'')+'</div></div><div class="tot">'+plata(p.total)+'</div></div>'+
     '<div class="det"><b>'+esc(resumen(p))+'</b>'+(p.domicilio?' <span class="small">+ domicilio</span>':' <span class="small">· recoge</span>')+'</div>'+
     (p.dir?'<div class="dir">'+esc(p.dir)+' · <a href="'+mapa(p.dir)+'" target="_blank" rel="noopener">Mapa</a></div>':'')+
     (p.nota?'<div class="dir">📝 '+esc(p.nota)+'</div>':'')+
@@ -395,66 +393,72 @@ function tarjeta(p,modo){
 const msgGracias=p=>"Hola"+(primer(p)?" "+primer(p):"")+", "+(S.config.gracias||"muchas gracias por su compra.");
 
 /* ============ vistas ============ */
+function panelTotal(){
+  const base=activos(), t=base.reduce((s,p)=>s+p.total,0);
+  return '<div class="ptotal"><div class="fila"><div class="sp"><div class="l">Total de los dos</div><div class="v">'+plata(t)+'</div></div><div class="s" style="text-align:right">'+base.length+' pedidos<br>'+base.filter(p=>p.estado!=="entregado").length+' por entregar</div></div>'+
+    '<div class="pdos">'+S.perfiles.map(pf=>{const x=base.filter(p=>p.vendedor===pf.user_id);return '<span><i style="background:'+pf.color+'"></i>'+esc(pf.user_id===S.yo.user_id?"Usted":pf.nombre.split(" ")[0])+' <b>'+plata(x.reduce((s,p)=>s+p.total,0))+'</b> · '+x.length+'</span>';}).join("")+'</div></div>';
+}
+function grupoTit(f){ const d=f<hoy()?"Atrasado · ":""; return d+(f===hoy()?"Hoy · ":f===masDias(hoy(),1)?"Mañana · ":"")+nomDia(f); }
 function vPedidos(){
-  const l=delDia(S.dia).sort((a,b)=>new Date(b.creado)-new Date(a.creado));
-  if(!l.length) return '<div class="vacio"><b>Sin pedidos este día</b>Toque el botón naranja <b style="display:inline;color:var(--naranja)">+</b> para anotar uno.</div>'+(S.dia<hoy()?'':'<button class="btn b-nar full" data-a="nuevo">+ Anotar pedido</button>');
+  const l=filtrar(activos()).sort((a,b)=>new Date(b.creado)-new Date(a.creado));
+  if(!l.length) return '<div class="vacio"><b>Todavía no tiene pedidos</b>Toque el botón naranja <b style="display:inline;color:var(--naranja)">+</b> para anotar uno.</div>';
+  const pend=l.filter(p=>p.estado!=="entregado");
   const tot=l.reduce((s,p)=>s+p.total,0), c=l.reduce((s,p)=>s+cuantos(p),0);
-  return '<div class="grid3" style="margin-bottom:12px"><div class="kpi"><div class="l">Pedidos</div><div class="v">'+l.length+'</div></div><div class="kpi"><div class="l">Combos</div><div class="v">'+c+'</div></div><div class="kpi dest"><div class="l">Vendido</div><div class="v">'+plata(tot)+'</div></div></div>'+l.map(p=>tarjeta(p,"ped")).join("");
+  return '<div class="grid3" style="margin-bottom:12px"><div class="kpi"><div class="l">Pedidos</div><div class="v">'+l.length+'</div><div class="s">'+pend.length+' sin entregar</div></div><div class="kpi"><div class="l">Combos</div><div class="v">'+c+'</div></div><div class="kpi dest"><div class="l">Vendido</div><div class="v">'+plata(tot)+'</div></div></div>'+
+    '<div class="small" style="margin:4px 2px 8px;font-weight:700">MIS PEDIDOS · EL MÁS NUEVO ARRIBA</div>'+l.map(p=>tarjeta(p,"ped")).join("");
+}
+function alistar(lista){
+  let sal=0,cam=0,salLb=0,camLb=0; lista.forEach(p=>(p.items||[]).forEach(i=>{const g=GRAMOS[i.id];if(g){sal+=g.sal*i.cant;cam+=g.cam*i.cant;} else if(i.id==="salmon-lb")salLb+=i.cant; else if(i.id==="camaron-lb")camLb+=i.cant;}));
+  const al=[]; if(sal)al.push(sal+(sal===1?" filete":" filetes")+" de salmón (combos)"); if(salLb)al.push(fmtLb(salLb)+" de salmón"); if(cam)al.push((cam>=1000?(cam/1000).toLocaleString("es-CO")+" kg":cam+" g")+" de camarón (combos)"); if(camLb)al.push(fmtLb(camLb)+" de camarón");
+  return al.join(" · ");
 }
 function vEntregas(){
-  const l=delDia(S.dia).sort((a,b)=>(a.hora||"99").localeCompare(b.hora||"99"));
-  const pend=l.filter(p=>p.estado!=="entregado"), ent=l.filter(p=>p.estado==="entregado").sort((a,b)=>new Date(b.entregado_en)-new Date(a.entregado_en));
+  const todos=filtrar(activos());
+  const pend=todos.filter(p=>p.estado!=="entregado"), ent=todos.filter(p=>p.estado==="entregado").sort((a,b)=>new Date(b.entregado_en)-new Date(a.entregado_en));
   const cobrar=pend.filter(p=>!p.pagado).reduce((s,p)=>s+p.total,0);
-  let h='<div class="grid3" style="margin-bottom:12px"><div class="kpi"><div class="l">Faltan</div><div class="v">'+pend.length+'</div><div class="s">'+(n=>n+(n===1?" combo":" combos"))(pend.reduce((s,p)=>s+cuantos(p),0))+'</div></div><div class="kpi"><div class="l">Por cobrar</div><div class="v">'+plata(cobrar)+'</div></div><div class="kpi"><div class="l">Entregados</div><div class="v">'+ent.length+'</div><div class="s">'+(n=>n+(n===1?" combo":" combos"))(ent.reduce((s,p)=>s+cuantos(p),0))+'</div></div></div>';
-  if(!l.length) return h+'<div class="vacio"><b>Nada por entregar</b>Los pedidos de este día aparecen aquí, ordenados por hora.</div>';
-  // alistar
-  let sal=0,cam=0,salLb=0,camLb=0; pend.forEach(p=>(p.items||[]).forEach(i=>{const g=GRAMOS[i.id];if(g){sal+=g.sal*i.cant;cam+=g.cam*i.cant;} else if(i.id==="salmon-lb")salLb+=i.cant; else if(i.id==="camaron-lb")camLb+=i.cant;}));
-  const al=[]; if(sal)al.push(sal+(sal===1?" filete":" filetes")+" de salmón (combos)"); if(salLb)al.push(fmtLb(salLb)+" de salmón"); if(cam)al.push((cam>=1000?(cam/1000).toLocaleString("es-CO")+" kg":cam+" g")+" de camarón (combos)"); if(camLb)al.push(fmtLb(camLb)+" de camarón");
-  if(pend.length&&al.length) h+='<div class="card" style="padding:12px 16px"><div class="small">Para alistar</div><div style="font-weight:700;line-height:1.5">'+al.join("<br>")+'</div></div>';
-  const sinAviso=pend.filter(p=>!p.avisado_en).length;
-  if(pend.length) h+='<button class="btn b-nar full" data-a="avisar" style="margin-bottom:8px">🛵 Avisar “ya vamos” · '+(sinAviso?"faltan "+sinAviso:"todos avisados")+'</button>';
-  h+='<div class="grid2" style="margin-bottom:14px"><button class="btn b-bor" data-a="copiarlista">Copiar ruta</button><button class="btn b-bor" data-a="excel">Descargar Excel</button></div>';
-  h+=pend.map(p=>tarjeta(p,"ent")).join("");
-  if(ent.length) h+='<div class="small" style="margin:18px 2px 8px;font-weight:700">YA ENTREGADOS</div>'+ent.map(p=>tarjeta(p,"ent")).join("");
+  let h='<div class="grid3" style="margin-bottom:12px"><div class="kpi"><div class="l">Por entregar</div><div class="v">'+pend.length+'</div><div class="s">'+(n=>n+(n===1?" combo":" combos"))(pend.reduce((s,p)=>s+cuantos(p),0))+'</div></div><div class="kpi"><div class="l">Por cobrar</div><div class="v">'+plata(cobrar)+'</div></div><div class="kpi"><div class="l">Entregados</div><div class="v">'+ent.length+'</div></div></div>';
+  if(!todos.length) return h+'<div class="vacio"><b>Nada por entregar</b>Los pedidos aparecen aquí, ordenados por día y hora.</div>';
+  if(!pend.length) h+='<div class="vacio" style="padding:20px"><b>Todo entregado 🙌</b></div>';
+  const fechas=[...new Set(pend.map(p=>p.fecha))].sort();
+  fechas.forEach(f=>{
+    const g=pend.filter(p=>p.fecha===f).sort((a,b)=>(a.hora||"99").localeCompare(b.hora||"99"));
+    const sinAviso=g.filter(p=>!p.avisado_en).length, al=alistar(g);
+    h+='<div class="grupo"><div class="gcab"><div class="sp"><b>'+esc(grupoTit(f))+'</b><div class="small">'+g.length+(g.length===1?" pedido":" pedidos")+' · '+plata(g.reduce((s,p)=>s+p.total,0))+'</div></div></div>'+
+      (al?'<div class="small" style="color:var(--tinta);margin:2px 0 10px"><b>Alistar:</b> '+esc(al)+'</div>':'')+
+      '<div class="grid2" style="margin-bottom:10px"><button class="btn b-nar" style="font-size:14px;padding:11px 8px" data-a="avisar" data-f="'+f+'">🛵 Ya vamos'+(sinAviso?" · "+sinAviso:" ✓")+'</button><button class="btn b-bor" style="font-size:14px;padding:11px 8px" data-a="copiarlista" data-f="'+f+'">Copiar ruta</button></div>'+
+      g.map(p=>tarjeta(p,"ent")).join("")+'</div>';
+  });
+  if(ent.length) h+='<div class="small" style="margin:18px 2px 8px;font-weight:700">YA ENTREGADOS</div>'+ent.slice(0,30).map(p=>tarjeta(p,"ent")).join("")+(ent.length>30?'<div class="small" style="text-align:center">y '+(ent.length-30)+' más (ver en Excel)</div>':'');
+  h+='<button class="btn b-bor full" style="margin-top:12px" data-a="excel" data-r="todo">Descargar todo para Excel</button>';
   return h;
 }
+
 function barra(partes){const t=partes.reduce((s,x)=>s+x[0],0);return '<div class="barra">'+(t?partes.filter(x=>x[0]>0).map(x=>'<div style="flex:'+x[0]+';background:'+x[1]+'"></div>').join(""):"")+'</div><div class="leg">'+partes.map(x=>'<span><i style="background:'+x[1]+'"></i>'+x[2]+' <b>'+(x[3]!=null?x[3]:x[0])+'</b></span>').join("")+'</div>';}
+function enPer(f){ if(S.per==="todo") return true; if(S.per==="hoy") return f===hoy(); const d=new Date(); const lun=iso(new Date(d.getFullYear(),d.getMonth(),d.getDate()-((d.getDay()+6)%7))); return f>=lun&&f<=masDias(lun,6); }
 function vCuentas(){
-  const l=delDia(S.dia);
+  const l=filtrar(activos()).filter(p=>enPer(p.fecha));
   const venta=l.reduce((s,p)=>s+p.total,0), dom=l.reduce((s,p)=>s+(p.domicilio||0),0);
   const ef=l.filter(p=>p.pagado&&p.medio==="Efectivo").reduce((s,p)=>s+p.total,0), nq=l.filter(p=>p.pagado&&p.medio==="Nequi").reduce((s,p)=>s+p.total,0), pe=l.filter(p=>!p.pagado).reduce((s,p)=>s+p.total,0);
-  const gastos=S.gastos.filter(g=>g.fecha===S.dia&&(S.quien==="todos"||g.vendedor===S.quien));
-  const totG=gastos.reduce((s,g)=>s+g.valor,0);
-  const compras=S.compras.filter(c=>c.fecha===S.dia); const totC=compras.reduce((s,c)=>s+c.cant*c.costo,0);
-  const usaCompra=S.quien==="todos";
-  const gan=venta-totG-(usaCompra?totC:0);
-  let h='';
-  // por persona (siempre visible)
-  h+='<div class="card"><h3>Ventas por persona · '+esc(corto(S.dia))+'</h3><table class="t"><tr><th>Quién</th><th class="r">Combos</th><th class="r">Efectivo</th><th class="r">Nequi</th><th class="r">Total</th></tr>'+
-    S.perfiles.map(pf=>{const x=activos().filter(p=>p.fecha===S.dia&&p.vendedor===pf.user_id);return '<tr><td><span class="vend" style="color:var(--tinta)"><i style="background:'+pf.color+'"></i>'+esc(pf.nombre.split(" ")[0])+'</span></td><td class="r">'+x.reduce((s,p)=>s+cuantos(p),0)+'</td><td class="r">'+plata(x.filter(p=>p.pagado&&p.medio==="Efectivo").reduce((s,p)=>s+p.total,0))+'</td><td class="r">'+plata(x.filter(p=>p.pagado&&p.medio==="Nequi").reduce((s,p)=>s+p.total,0))+'</td><td class="r"><b>'+plata(x.reduce((s,p)=>s+p.total,0))+'</b></td></tr>';}).join("")+
-    (()=>{const x=activos().filter(p=>p.fecha===S.dia);return '<tr style="background:var(--suave)"><td><b>Total</b></td><td class="r">'+x.reduce((s,p)=>s+cuantos(p),0)+'</td><td class="r">'+plata(x.filter(p=>p.pagado&&p.medio==="Efectivo").reduce((s,p)=>s+p.total,0))+'</td><td class="r">'+plata(x.filter(p=>p.pagado&&p.medio==="Nequi").reduce((s,p)=>s+p.total,0))+'</td><td class="r"><b>'+plata(x.reduce((s,p)=>s+p.total,0))+'</b></td></tr>';})()+
+  const gastos=S.gastos.filter(g=>enPer(g.fecha)&&(S.quien==="todos"||g.vendedor===S.quien)).sort((a,b)=>new Date(b.creado)-new Date(a.creado));
+  const totG=gastos.reduce((s,g)=>s+g.valor,0), gan=venta-totG;
+  let h='<div class="seg" style="background:var(--naranja2)">'+[["semana","Esta semana"],["hoy","Hoy"],["todo","Todo"]].map(([k,t])=>'<button data-per="'+k+'" class="'+(S.per===k?"on":"")+'">'+t+'</button>').join("")+'</div>';
+  const base=activos().filter(p=>enPer(p.fecha));
+  const fila=(nom,color,x)=>'<tr'+(color?'':' style="background:var(--suave)"')+'><td>'+(color?'<span class="vend" style="color:var(--tinta)"><i style="background:'+color+'"></i>'+esc(nom)+'</span>':'<b>'+nom+'</b>')+'</td><td class="r">'+x.reduce((s,p)=>s+cuantos(p),0)+'</td><td class="r">'+plata(x.filter(p=>p.pagado&&p.medio==="Efectivo").reduce((s,p)=>s+p.total,0))+'</td><td class="r">'+plata(x.filter(p=>p.pagado&&p.medio==="Nequi").reduce((s,p)=>s+p.total,0))+'</td><td class="r"><b>'+plata(x.reduce((s,p)=>s+p.total,0))+'</b></td></tr>';
+  h+='<div class="card"><h3>Ventas de los dos</h3><table class="t"><tr><th>Quién</th><th class="r">Combos</th><th class="r">Efectivo</th><th class="r">Nequi</th><th class="r">Total</th></tr>'+
+    S.perfiles.map(pf=>fila(pf.nombre.split(" ")[0],pf.color,base.filter(p=>p.vendedor===pf.user_id))).join("")+fila("Total",null,base)+
     '</table><div class="small" style="margin-top:8px">El efectivo es la plata que cada uno debe tener en la mano.</div></div>';
-  h+='<div class="grid2" style="margin-bottom:12px"><div class="kpi dest"><div class="l">Vendido '+(S.quien==="todos"?"(todos)":"("+esc(perfil(S.quien).nombre.split(" ")[0])+")")+'</div><div class="v">'+plata(venta)+'</div><div class="s">incluye '+plata(dom)+' de domicilios</div></div>'+
-    '<div class="kpi"><div class="l">Ganancia</div><div class="v" style="color:'+(gan>=0?"var(--verde)":"var(--rojo)")+'">'+plata(gan)+'</div><div class="s">'+(usaCompra?(totC?"ventas − compra − gastos":"anote la compra abajo"):"ventas − sus gastos")+'</div></div></div>';
+  h+='<div class="grid2" style="margin-bottom:12px"><div class="kpi dest"><div class="l">Mis ventas</div><div class="v">'+plata(venta)+'</div><div class="s">incluye '+plata(dom)+' de domicilios</div></div>'+
+    '<div class="kpi"><div class="l">Ganancia</div><div class="v" style="color:'+(gan>=0?"var(--verde)":"var(--rojo)")+'">'+plata(gan)+'</div><div class="s">ventas − compras y gastos</div></div></div>';
   h+='<div class="card"><h3>Plata</h3>'+barra([[ef,"var(--verde)","Efectivo",plata(ef)],[nq,"var(--azul)","Nequi",plata(nq)],[pe,"var(--rojo)","Debe",plata(pe)]])+'</div>';
-  // combos
-  h+='<div class="card"><h3>Productos</h3>'+prods().map(pr=>{const e=l.filter(p=>p.estado==="entregado").reduce((s,p)=>s+(p.items||[]).filter(i=>i.id===pr.id).reduce((a,i)=>a+i.cant,0),0),f=l.filter(p=>p.estado!=="entregado").reduce((s,p)=>s+(p.items||[]).filter(i=>i.id===pr.id).reduce((a,i)=>a+i.cant,0),0),c=compras.find(x=>x.producto===pr.id);
-    const u=pr.unidad==="lb"; return '<div style="margin-bottom:12px"><div class="fila"><b class="sp">'+esc(pr.nombre)+(u?' <span class="small">(libras)</span>':'')+'</b>'+(c&&c.cant&&usaCompra?'<span class="small">quedan '+Math.max(c.cant-e-f,0)+' de '+c.cant+'</span>':'')+'</div>'+barra([[e,"var(--naranja)","Entregados"],[f,"var(--linea)","Por entregar"]])+'</div>';}).join("")+'</div>';
-  // compra (compartida)
-  h+='<div class="card"><h3>Compra del día <span class="small" style="font-weight:500">· de los dos</span></h3>'+prods().map(pr=>{const c=compras.find(x=>x.producto===pr.id)||{};return '<div class="small" style="font-weight:700;color:var(--tinta);margin-top:6px">'+esc(pr.nombre)+'</div><div class="grid2" style="margin-top:6px"><input inputmode="numeric" placeholder="'+(pr.unidad==="lb"?"Libras":"Cuántos")+'" data-compra="'+pr.id+'" data-k="cant" value="'+(c.cant||"")+'"><input inputmode="numeric" placeholder="'+(pr.unidad==="lb"?"Costo por lb":"Costo c/u")+'" data-compra="'+pr.id+'" data-k="costo" value="'+(c.costo?plata(c.costo):"")+'"></div>';}).join("")+
-    (totC?'<div class="lin" style="margin-top:8px"><span>Total compra</span><b>'+plata(totC)+'</b></div>':'')+'</div>';
-  // gastos
-  h+='<div class="card"><h3>Gastos</h3>'+(gastos.length?gastos.map(g=>'<div class="lin"><span class="sp">'+esc(g.descripcion)+' <span class="vend"><i style="background:'+perfil(g.vendedor).color+'"></i>'+esc(perfil(g.vendedor).nombre.split(" ")[0])+'</span></span><b style="margin-right:8px">'+plata(g.valor)+'</b><button class="x" data-a="borrargasto" data-id="'+g.id+'">×</button></div>').join(""):'<div class="muted">Sin gastos.</div>')+
-    '<button class="btn b-sua full" style="margin-top:10px" data-a="gasto">+ Agregar gasto</button></div>';
-  // deben
+  h+='<div class="card"><h3>Lo que se ha vendido</h3>'+prods().map(pr=>{const u=pr.unidad==="lb";const sum=fl=>l.filter(fl).reduce((s,p)=>s+(p.items||[]).filter(i=>i.id===pr.id).reduce((a,i)=>a+i.cant,0),0);const e=sum(p=>p.estado==="entregado"),f=sum(p=>p.estado!=="entregado");
+    return '<div style="margin-bottom:12px"><b>'+esc(pr.nombre)+(u?' <span class="small">(libras)</span>':'')+'</b>'+barra([[e,"var(--naranja)","Entregado",u?fmtLb(e):e],[f,"var(--linea)","Por entregar",u?fmtLb(f):f]])+'</div>';}).join("")+'</div>';
+  h+='<div class="card"><h3>Compras y gastos</h3>'+(gastos.length?gastos.map(g=>'<div class="lin"><span class="sp">'+esc(g.descripcion)+'<br><span class="small">'+esc(corto(g.fecha))+' · <span class="vend"><i style="background:'+perfil(g.vendedor).color+'"></i>'+esc(perfil(g.vendedor).nombre.split(" ")[0])+'</span></span></span><b style="margin-right:8px">'+plata(g.valor)+'</b><button class="x" data-a="borrargasto" data-id="'+g.id+'">×</button></div>').join("")+'<div class="lin"><b>Total</b><b>'+plata(totG)+'</b></div>':'<div class="muted">Anote lo que compró (salmón, camarón) y los gastos (gasolina, bolsas) para saber la ganancia.</div>')+
+    '<button class="btn b-sua full" style="margin-top:10px" data-a="gasto">+ Agregar compra o gasto</button></div>';
   const deben=filtrar(activos().filter(p=>!p.pagado)).sort((a,b)=>a.fecha.localeCompare(b.fecha));
-  h+='<div class="card"><h3>Quién debe</h3>'+(deben.length?deben.map(p=>'<div class="lin"><span class="sp"><b>'+esc(p.nombre||celB(p.cel))+'</b><br><span class="small">'+corto(p.fecha)+' · '+esc(resumen(p))+'</span></span><b style="color:var(--rojo);margin-right:8px">'+plata(p.total)+'</b><button class="btn b-tin" style="padding:8px 10px;font-size:13px" data-a="pagar" data-id="'+p.id+'">Pagó</button></div>').join(""):'<div class="muted">Nadie debe.</div>')+'</div>';
-  // días
-  const dias={}; filtrar(activos()).forEach(p=>{const d=dias[p.fecha]||(dias[p.fecha]={c:0,v:0});d.c+=cuantos(p);d.v+=p.total;});
-  const ks=Object.keys(dias).sort().reverse(), tc=ks.reduce((s,k)=>s+dias[k].c,0), tv=ks.reduce((s,k)=>s+dias[k].v,0);
-  h+='<div class="card"><h3>Días de venta</h3>'+(ks.length?'<table class="t"><tr><th>Día</th><th class="r">Combos</th><th class="r">Vendido</th></tr>'+ks.map(k=>'<tr data-dia="'+k+'" style="cursor:pointer'+(k===S.dia?';background:var(--naranja2)':'')+'"><td>'+corto(k)+'</td><td class="r">'+dias[k].c+'</td><td class="r">'+plata(dias[k].v)+'</td></tr>').join("")+'<tr style="background:var(--suave)"><td><b>Total</b></td><td class="r">'+tc+'</td><td class="r"><b>'+plata(tv)+'</b></td></tr></table>':'<div class="muted">Aún no hay ventas.</div>')+'</div>';
+  h+='<div class="card"><h3>Quién debe</h3>'+(deben.length?deben.map(p=>'<div class="lin"><span class="sp"><b>'+esc(p.nombre||celB(p.cel))+'</b><br><span class="small">'+esc(resumen(p))+'</span></span><b style="color:var(--rojo);margin-right:8px">'+plata(p.total)+'</b><button class="btn b-tin" style="padding:8px 10px;font-size:13px" data-a="pagar" data-id="'+p.id+'">Pagó</button></div>').join(""):'<div class="muted">Nadie debe.</div>')+'</div>';
   return h;
 }
+
 function vAjustes(){
   const promo=mensajeVenta();
   return '<div class="card"><div class="fila"><span class="av" style="background:'+S.yo.color+';width:44px;height:44px;font-size:16px">'+iniciales(S.yo.nombre)+'</span><div class="sp"><b>'+esc(S.yo.nombre)+'</b><div class="small">Ve y edita todo junto con '+esc(S.perfiles.filter(p=>p.user_id!==S.yo.user_id).map(p=>p.nombre).join(", "))+'</div></div></div><div class="acts"><button class="btn b-sua" data-a="clave">Cambiar clave</button><button class="btn b-bor" data-a="salir">Salir</button></div></div>'+
@@ -483,7 +487,7 @@ function abrirPedido(p,forzarNuevo){
   CALMES=null;
   if(!p&&!forzarNuevo){ const d=leerBorrador(); if(d&&d.items){ B=d; pintarForm(); abrir(); toast("Recuperé el pedido que estaba escribiendo"); return; } }
   if(p){ B=JSON.parse(JSON.stringify(p)); B.conDom=!!p.domicilio; B.domVal=p.domicilio||0; B.manual=p.subtotal+(p.domicilio||0)!==p.total?p.total:null; }
-  else B={id:crypto.randomUUID(),fecha:S.dia<hoy()?hoy():S.dia,vendedor:S.yo.user_id,cel:"",nombre:"",dir:"",hora:"",items:[],pagado:false,medio:"",cuando_paga:"",nota:"",estado:"pendiente",conDom:true,manual:null};
+  else B={id:crypto.randomUUID(),fecha:hoy(),vendedor:S.yo.user_id,cel:"",nombre:"",dir:"",hora:"",items:[],pagado:false,medio:"",cuando_paga:"",nota:"",estado:"pendiente",conDom:true,manual:null};
   prods().forEach(pr=>{ if(!B.items.find(i=>i.id===pr.id)) B.items.push({id:pr.id,nombre:pr.nombre,precio:pr.precio,unidad:pr.unidad||"combo",cant:0}); });
   if(!p&&!B.items.some(i=>i.cant)) {}
   pintarForm(); abrir();
@@ -510,8 +514,7 @@ function pintarForm(){
   (k?'<div class="conocido">Ya compró: <b>'+esc(k.nombre||celB(k.cel))+'</b>'+(k.dir?' · '+esc(k.dir):'')+' <button class="chip" style="padding:4px 10px;font-size:12px;margin-left:4px" data-f="usar">Usar datos</button></div>':'')+
   '<label>Entrega</label><div class="chips"><button class="chip '+(B.conDom?"on":"")+'" data-dom="1">🛵 Domicilio +'+plata(S.config.domicilio)+'</button><button class="chip '+(!B.conDom?"on":"")+'" data-dom="0">Recoge</button></div>'+
   (B.conDom?'<input id="f-dir" style="margin-top:8px" placeholder="Barrio, calle, casa" value="'+esc(B.dir)+'">':'')+
-  '<label>Día</label><div class="chips">'+[[hoy(),"Hoy"],[masDias(hoy(),1),"Mañana"]].concat(sab>masDias(hoy(),1)?[[sab,"Sábado "+sab.slice(8).replace(/^0/,"")]]:[]).map(([f,t])=>'<button class="chip '+(B.fecha===f?"on":"")+'" data-fecha="'+f+'">'+t+'</button>').join("")+'<button class="chip" data-f="vercal">📅 Otro día</button></div>'+
-  (B.verCal?calendario():'')+'<div class="small" style="margin-top:6px">Se entrega el <b style="color:var(--tinta)">'+esc(nomDia(B.fecha).toLowerCase())+'</b></div>'+
+  '<label>Día</label><div class="chips">'+[[hoy(),"Hoy"],[masDias(hoy(),1),"Mañana"]].concat(sab>masDias(hoy(),1)?[[sab,"Sábado "+sab.slice(8).replace(/^0/,"")]]:[]).map(([f,t])=>'<button class="chip '+(B.fecha===f?"on":"")+'" data-fecha="'+f+'">'+t+'</button>').join("")+'</div><input id="f-fecha" type="date" min="'+hoy()+'" style="margin-top:8px" value="'+esc(B.fecha)+'">'+'<div class="small" style="margin-top:6px">Se entrega el <b style="color:var(--tinta)">'+esc(nomDia(B.fecha).toLowerCase())+'</b></div>'+
   '<label>Hora</label><div class="chips">'+["10:00","12:00","15:00","18:00"].map(h=>'<button class="chip '+(B.hora===h?"on":"")+'" data-hora="'+h+'">'+h12(h)+'</button>').join("")+'</div><input id="f-hora" type="time" style="margin-top:8px" value="'+esc(B.hora)+'">'+
   '<label>Pago</label><div class="chips">'+[["Efectivo","Pagó efectivo"],["Nequi","Pagó Nequi"],["","Paga al recibir"]].map(([m,t])=>'<button class="chip '+((B.pagado?B.medio:"")===m?"on":"")+'" data-pago="'+m+'">'+t+'</button>').join("")+'</div>'+
   (!B.pagado?'<input id="f-cuando" style="margin-top:8px" placeholder="¿Cuándo paga? (opcional)" value="'+esc(B.cuando_paga)+'">':'')+
@@ -522,6 +525,7 @@ function pintarForm(){
   '<button class="btn b-sua full" style="margin-top:8px" data-f="cerrar">Cancelar</button>';
 }
 function leer(){const v=id=>{const e=$(id);return e?e.value:null;};
+  if(v("#f-fecha")) B.fecha=v("#f-fecha");
   B.cel=v("#f-cel")??B.cel; if(v("#f-dir")!=null)B.dir=v("#f-dir"); B.hora=v("#f-hora")??B.hora; B.nombre=v("#f-nom")??B.nombre; B.nota=v("#f-nota")??B.nota;
   if(v("#f-cuando")!=null)B.cuando_paga=v("#f-cuando"); const m=dig(v("#f-val")); B.manual=m?+m:null;}
 async function guardarForm(otro){
@@ -536,8 +540,8 @@ async function guardarForm(otro){
   const btn=document.querySelector('[data-f="guardar"]'); if(btn) btn.disabled=true;
   try{ await guardarPedido(p); }catch(e){ if(btn) btn.disabled=false; return; }
   borrarBorrador();
-  const otroDia=p.fecha!==S.dia; S.dia=p.fecha; if(S.quien!=="todos"&&S.quien!==p.vendedor) S.quien="todos"; render();
-  toast(otroDia?"Guardado para "+nomDia(p.fecha).toLowerCase():"Pedido guardado");
+  render();
+  toast((p.vendedor!==S.yo.user_id?"Guardado a nombre de "+perfil(p.vendedor).nombre.split(" ")[0]:"Pedido guardado")+" · se entrega "+(p.fecha===hoy()?"hoy":p.fecha===masDias(hoy(),1)?"mañana":nomDia(p.fecha).toLowerCase()));
   if(otro) abrirPedido(null,true); else cerrar();
 }
 function abrir(){ $("#velo").classList.add("on"); document.body.style.overflow="hidden"; }
@@ -577,9 +581,9 @@ $("#hoja").addEventListener("click",async e=>{
     case "gracias": cerrar(); setTimeout(()=>cambiarPedido(id,{gracias_en:new Date().toISOString()}).catch(()=>{}),400); break;
     case "avisado": setTimeout(async()=>{ try{ await cambiarPedido(id,{avisado_en:new Date().toISOString()}); }catch(_){} siguienteAviso(); },500); break;
     case "saltar": try{ await cambiarPedido(id,{avisado_en:new Date().toISOString()}); }catch(_){} siguienteAviso(); break;
-    case "dia": S.dia=h.dataset.f; cerrar(); render(); break;
+    case "gtxt": $("#g-d").value=h.dataset.v; document.querySelectorAll('[data-h="gtxt"]').forEach(c=>c.classList.toggle("on",c===h)); break;
     case "ggasto": { const d=$("#g-d").value.trim(), v=+dig($("#g-v").value); if(!d||!v) return toast("Falta qué y cuánto");
-      const g={fecha:S.dia,vendedor:S.yo.user_id,descripcion:d,valor:v}; const {data,error}=await sb.from("combos_gastos").insert(g).select().single(); if(error) return toast("No se guardó");
+      const g={fecha:hoy(),vendedor:S.yo.user_id,descripcion:d,valor:v}; const {data,error}=await sb.from("combos_gastos").insert(g).select().single(); if(error) return toast("No se guardó");
       if(!S.gastos.find(x=>x.id===data.id)) S.gastos.push(data); cerrar(); render(); toast("Gasto guardado"); break; }
     case "gclave": { const a=dig($("#c-1").value), b=dig($("#c-2").value); if(a.length!==6) return toast("Deben ser 6 números"); if(a!==b) return toast("No coinciden");
       const {error}=await sb.auth.updateUser({password:a}); if(error) return toast("No se pudo cambiar"); cerrar(); toast("Clave cambiada"); break; }
@@ -604,9 +608,11 @@ function trasEntregar(p){
   hoja('<h2>¡Entregado! ✓</h2><div class="muted">¿Le manda las gracias a '+esc(p.nombre||celB(p.cel))+'?</div><div style="background:var(--suave);border-radius:12px;padding:12px;margin:12px 0;font-size:15px">'+esc(msgGracias(p))+'</div>'+
    '<a class="btn b-nar full" target="_blank" rel="noopener" href="'+wa(p.cel,msgGracias(p))+'" data-h="gracias" data-id="'+p.id+'">Enviar gracias por WhatsApp</a><button class="btn b-sua full" style="margin-top:8px" data-h="cerrar">Ahora no</button>');
 }
-function siguienteAviso(){
-  const l=delDia(S.dia).filter(p=>p.estado!=="entregado"&&!p.avisado_en).sort((a,b)=>(a.hora||"99").localeCompare(b.hora||"99"));
-  if(!l.length) return hoja('<h2>Todos avisados ✓</h2><div class="muted">Ya les avisó a todos los clientes de este día.</div><button class="btn b-nar full" style="margin-top:14px" data-h="cerrar">Listo</button>');
+let AVF=null;
+function siguienteAviso(f){
+  if(f) AVF=f;
+  const l=filtrar(activos()).filter(p=>p.fecha===AVF).filter(p=>p.estado!=="entregado"&&!p.avisado_en).sort((a,b)=>(a.hora||"99").localeCompare(b.hora||"99"));
+  if(!l.length) return hoja('<h2>Todos avisados ✓</h2><div class="muted">Ya les avisó a todos los clientes de '+esc(grupoTit(AVF).toLowerCase())+'.</div><button class="btn b-nar full" style="margin-top:14px" data-h="cerrar">Listo</button>');
   const p=l[0], m="Hola"+(primer(p)?" "+primer(p):"")+"! 🛵 Ya vamos para allá con su pedido: "+resumen(p)+"."+(p.pagado?" Ya está pagado.":" Total "+plata(p.total)+".")+" ¡Gracias por comprar Combos del Mar!";
   hoja('<h2>Avisar “ya vamos”</h2><div class="muted">Faltan '+l.length+'. Toque Enviar en WhatsApp, vuelva aquí y siga con el próximo.</div><div style="background:var(--suave);border-radius:12px;padding:12px;margin:12px 0"><b>'+esc(p.nombre||celB(p.cel))+'</b><div class="small">'+esc(p.dir)+'</div><div style="margin-top:6px;font-size:15px">'+esc(m)+'</div></div>'+
    '<a class="btn b-nar full" target="_blank" rel="noopener" href="'+wa(p.cel,m)+'" data-h="avisado" data-id="'+p.id+'">Enviar a '+esc(primer(p)||celB(p.cel))+'</a><div class="acts"><button class="btn b-bor" data-h="saltar" data-id="'+p.id+'">Saltar</button><button class="btn b-sua" data-h="cerrar">Terminar</button></div>');
@@ -622,17 +628,16 @@ function csv(lista){
   return "﻿"+r.join("\r\n");
 }
 function excel(todo){
-  const l=(todo?filtrar(activos()):delDia(S.dia)).slice().sort((a,b)=>(a.fecha+a.hora).localeCompare(b.fecha+b.hora));
+  const l=filtrar(activos()).slice().sort((a,b)=>(a.fecha+a.hora).localeCompare(b.fecha+b.hora));
   if(!l.length) return toast("No hay pedidos");
-  const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([csv(l)],{type:"text/csv;charset=utf-8"})); a.download=todo?"combos-todo.csv":"combos-"+S.dia+".csv"; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500);
+  const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([csv(l)],{type:"text/csv;charset=utf-8"})); a.download="combos-"+hoy()+".csv"; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500);
 }
-function ruta(){
-  const l=delDia(S.dia).filter(p=>p.estado!=="entregado").sort((a,b)=>(a.hora||"99").localeCompare(b.hora||"99"));
-  return "🛵 RUTA "+nomDia(S.dia).toUpperCase()+"\n\n"+l.map((p,i)=>(i+1)+". "+(p.hora?h12(p.hora):"Sin hora")+" · "+(p.nombre||celB(p.cel))+"\n   "+resumen(p)+"\n   📍 "+(p.dir||"Recoge")+"\n   📲 "+celB(p.cel)+" · "+(p.pagado?"Ya pagó":"Cobrar "+plata(p.total))).join("\n\n");
+function ruta(f){
+  const l=filtrar(activos()).filter(p=>p.fecha===f).filter(p=>p.estado!=="entregado").sort((a,b)=>(a.hora||"99").localeCompare(b.hora||"99"));
+  return "🛵 RUTA "+nomDia(f).toUpperCase()+"\n\n"+l.map((p,i)=>(i+1)+". "+(p.hora?h12(p.hora):"Sin hora")+" · "+(p.nombre||celB(p.cel))+"\n   "+resumen(p)+"\n   📍 "+(p.dir||"Recoge")+"\n   📲 "+celB(p.cel)+" · "+(p.pagado?"Ya pagó":"Cobrar "+plata(p.total))).join("\n\n");
 }
 async function clicMain(e){
-  const ir=e.target.closest("[data-irdia]"); if(ir){S.dia=ir.dataset.irdia;render();window.scrollTo(0,0);return;}
-  const tr=e.target.closest("[data-dia]"); if(tr){S.dia=tr.dataset.dia;S.tab="entregas";render();window.scrollTo(0,0);return;}
+  const pr=e.target.closest("[data-per]"); if(pr){S.per=pr.dataset.per;render();return;}
   const a=e.target.closest("[data-a]"); if(!a) return; const id=a.dataset.id, p=S.pedidos.find(x=>x.id===id);
   switch(a.dataset.a){
     case "nuevo": abrirPedido(); break;
@@ -641,10 +646,10 @@ async function clicMain(e){
     case "pagar": preguntarPago(p,false); break;
     case "deshacer": try{ await cambiarPedido(id,{estado:"pendiente",entregado_en:null}); toast("Volvió a por entregar"); }catch(_){} break;
     case "gracias": setTimeout(()=>cambiarPedido(id,{gracias_en:new Date().toISOString()}).catch(()=>{}),400); break;
-    case "avisar": siguienteAviso(); break;
-    case "copiarlista": copiar(ruta()); break;
+    case "avisar": siguienteAviso(a.dataset.f); break;
+    case "copiarlista": copiar(ruta(a.dataset.f)); break;
     case "excel": excel(a.dataset.r==="todo"); break;
-    case "gasto": hoja('<h2>Agregar gasto</h2><div class="small">Queda a nombre de '+esc(S.yo.nombre)+' · '+esc(corto(S.dia))+'</div><label>¿En qué?</label><input id="g-d" placeholder="Gasolina, bolsas, hielo…"><label>¿Cuánto?</label><input id="g-v" inputmode="numeric" placeholder="$0"><div class="acts"><button class="btn b-sua" data-h="cerrar">Cancelar</button><button class="btn b-nar" data-h="ggasto">Guardar</button></div>'); break;
+    case "gasto": hoja('<h2>Compra o gasto</h2><div class="small">Queda a nombre de '+esc(S.yo.nombre)+' · hoy</div><label>¿En qué?</label><div class="chips">'+["Compra de salmón","Compra de camarón","Gasolina","Bolsas","Hielo"].map(x=>'<button class="chip" data-h="gtxt" data-v="'+x+'">'+x+'</button>').join("")+'</div><input id="g-d" style="margin-top:8px" placeholder="O escriba otro"><label>¿Cuánto?</label><input id="g-v" inputmode="numeric" placeholder="$0"><div class="acts"><button class="btn b-sua" data-h="cerrar">Cancelar</button><button class="btn b-nar" data-h="ggasto">Guardar</button></div>'); break;
     case "borrargasto": { const {error}=await sb.from("combos_gastos").delete().eq("id",id); if(error) return toast("No se pudo borrar"); S.gastos=S.gastos.filter(g=>g.id!==id); render(); break; }
     case "copiarpromo": copiar(mensajeVenta()); break;
     case "clave": hoja('<h2>Cambiar clave</h2><label>Nueva clave (6 números)</label><input id="c-1" type="password" inputmode="numeric" maxlength="6"><label>Repítala</label><input id="c-2" type="password" inputmode="numeric" maxlength="6"><div class="acts"><button class="btn b-sua" data-h="cerrar">Cancelar</button><button class="btn b-nar" data-h="gclave">Guardar</button></div>'); break;
