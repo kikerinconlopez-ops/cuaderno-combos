@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#FAF8F4">
 <meta name="robots" content="noindex">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -17,7 +17,9 @@
   --naranja:#E8702A; --naranja2:#FCEBDD; --azul:#1E4FA3; --azul2:#E6EDF8; --verde:#1F9D55; --verde2:#E3F4EA; --rojo:#C8432F; --rojo2:#FBE7E3;
   --r:18px;
 }
-*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+button,a,.tilebtn{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+input,textarea,select{font-size:16px!important}
 html,body{margin:0;background:var(--fondo);color:var(--tinta);font-family:Inter,system-ui,-apple-system,sans-serif;font-size:16px;-webkit-font-smoothing:antialiased}
 button,input,textarea{font:inherit;color:inherit}
 button{cursor:pointer}
@@ -702,6 +704,8 @@ document.addEventListener("visibilitychange",()=>{ if(!document.hidden) revisarV
 setInterval(async()=>{ if(document.hidden||!S.yo||B) return; try{ await cargarTodo(); render(); if(!S.vivo) escuchar(); }catch(_){} },45000);
 window.addEventListener("online",async()=>{ if(!S.yo) return; try{ await cargarTodo(); render(); escuchar(); }catch(_){} });
 window.addEventListener("pagehide",()=>{ if(B){ leer(); guardarBorrador(); } });
+let ultTap=0; document.addEventListener("touchend",e=>{ const n=Date.now(); if(n-ultTap<350&&!e.target.closest("input,textarea,select")){ e.preventDefault(); const t=e.target; if(t&&t.click) t.click(); } ultTap=n; },{passive:false});
+document.addEventListener("gesturestart",e=>e.preventDefault());
 inicio();
 })();
 </script>
