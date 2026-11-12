@@ -190,6 +190,8 @@ table.t tr:last-child td{border-bottom:0}
 .tlb{position:absolute;left:8px;bottom:8px;background:rgba(31,29,26,.75);color:#fff;font-size:10px;font-weight:800;letter-spacing:.06em;border-radius:6px;padding:3px 6px}
 .tp small{font-size:12px;color:var(--gris);font-weight:600}
 .medias{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.otros{display:flex;flex-wrap:wrap;align-items:center;gap:6px;background:var(--azul2);border-radius:14px;padding:10px 12px;margin-bottom:12px}
+.otros .chip{padding:6px 11px;font-size:13px;border-color:transparent}
 </style>
 </head>
 <body>
@@ -289,7 +291,7 @@ async function entrar(user){
   try{ await cargarTodo(); }catch(e){ console.error(e); $("#root").innerHTML='<div class="login"><h1>No se pudo cargar</h1><div class="muted">Revise el internet e intente de nuevo.</div><button class="btn b-nar full" style="margin-top:20px" onclick="location.reload()">Reintentar</button><button class="btn b-sua full" style="margin-top:10px" id="salir0">Salir</button></div>'; $("#salir0").onclick=()=>sb.auth.signOut(); return; }
   S.yo=S.perfiles.find(p=>p.user_id===user.id);
   if(!S.yo){ await sb.auth.signOut(); ELEGIDO=null; pantallaLogin(); return; }
-  if(!S.dia){ S.dia = activos().some(p=>p.fecha===hoy()) ? hoy() : (activos().filter(p=>p.fecha>hoy()).map(p=>p.fecha).sort()[0]||hoy()); }
+  if(!S.dia){ S.dia = activos().some(p=>p.fecha===hoy()&&p.estado!=="entregado") ? hoy() : (activos().filter(p=>p.fecha>hoy()&&p.estado!=="entregado").map(p=>p.fecha).sort()[0]||hoy()); }
   montar(); escuchar();
 }
 async function cargarTodo(){
@@ -366,7 +368,10 @@ function render(){
   const pend=activos().filter(p=>p.fecha===S.dia&&p.estado!=="entregado").length, bd=$("#bdg");
   bd.style.display=pend?"":"none"; bd.textContent=pend;
   const bor=leerBorrador(), hayB=bor&&bor.items&&!B;
-  $("#main").innerHTML=(hayB?'<button class="aviso" data-a="nuevo" style="width:100%;border:0;text-align:left;font-weight:600">✏️ Tiene un pedido sin guardar'+(bor.nombre||bor.cel?' ('+esc(bor.nombre||celB(bor.cel))+')':'')+' · <u>continuar</u></button>':'')+({pedidos:vPedidos,entregas:vEntregas,cuentas:vCuentas,ajustes:vAjustes})[S.tab]();
+  const otros={}; filtrar(activos()).filter(p=>p.fecha>=hoy()&&p.fecha!==S.dia&&p.estado!=="entregado").forEach(p=>otros[p.fecha]=(otros[p.fecha]||0)+1);
+  const ko=Object.keys(otros).sort();
+  const franja=ko.length&&S.tab!=="ajustes"?'<div class="otros"><span class="small" style="font-weight:700">Pedidos en otros días:</span>'+ko.map(f=>'<button class="chip" data-irdia="'+f+'">'+esc(corto(f))+' · '+otros[f]+'</button>').join("")+'</div>':'';
+  $("#main").innerHTML=franja+(hayB?'<button class="aviso" data-a="nuevo" style="width:100%;border:0;text-align:left;font-weight:600">✏️ Tiene un pedido sin guardar'+(bor.nombre||bor.cel?' ('+esc(bor.nombre||celB(bor.cel))+')':'')+' · <u>continuar</u></button>':'')+({pedidos:vPedidos,entregas:vEntregas,cuentas:vCuentas,ajustes:vAjustes})[S.tab]();
   pintarVivo();
 }
 
@@ -531,7 +536,8 @@ async function guardarForm(otro){
   const btn=document.querySelector('[data-f="guardar"]'); if(btn) btn.disabled=true;
   try{ await guardarPedido(p); }catch(e){ if(btn) btn.disabled=false; return; }
   borrarBorrador();
-  toast(p.fecha===S.dia?"Pedido guardado":"Guardado para "+nomDia(p.fecha).toLowerCase());
+  const otroDia=p.fecha!==S.dia; S.dia=p.fecha; if(S.quien!=="todos"&&S.quien!==p.vendedor) S.quien="todos"; render();
+  toast(otroDia?"Guardado para "+nomDia(p.fecha).toLowerCase():"Pedido guardado");
   if(otro) abrirPedido(null,true); else cerrar();
 }
 function abrir(){ $("#velo").classList.add("on"); document.body.style.overflow="hidden"; }
@@ -625,6 +631,7 @@ function ruta(){
   return "🛵 RUTA "+nomDia(S.dia).toUpperCase()+"\n\n"+l.map((p,i)=>(i+1)+". "+(p.hora?h12(p.hora):"Sin hora")+" · "+(p.nombre||celB(p.cel))+"\n   "+resumen(p)+"\n   📍 "+(p.dir||"Recoge")+"\n   📲 "+celB(p.cel)+" · "+(p.pagado?"Ya pagó":"Cobrar "+plata(p.total))).join("\n\n");
 }
 async function clicMain(e){
+  const ir=e.target.closest("[data-irdia]"); if(ir){S.dia=ir.dataset.irdia;render();window.scrollTo(0,0);return;}
   const tr=e.target.closest("[data-dia]"); if(tr){S.dia=tr.dataset.dia;S.tab="entregas";render();window.scrollTo(0,0);return;}
   const a=e.target.closest("[data-a]"); if(!a) return; const id=a.dataset.id, p=S.pedidos.find(x=>x.id===id);
   switch(a.dataset.a){
