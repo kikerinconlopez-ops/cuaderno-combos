@@ -328,8 +328,8 @@ function escuchar(){
       if(k==="pedidos"&&ev.eventType==="INSERT"&&ev.new.vendedor!==S.yo.user_id) toast(perfil(ev.new.vendedor).nombre.split(" ")[0]+" anotó un pedido · "+plata(ev.new.total)); }
     render();
   }));
-  canal.subscribe(st=>{ S.vivo=st==="SUBSCRIBED"; pintarVivo(); });
-  document.addEventListener("visibilitychange",async()=>{ if(!document.hidden){ try{ await cargarTodo(); render(); }catch(e){} } });
+  canal.subscribe(st=>{ S.vivo=st==="SUBSCRIBED"; pintarVivo(); if(st==="CHANNEL_ERROR"||st==="TIMED_OUT"||st==="CLOSED"){ clearTimeout(escuchar.t); escuchar.t=setTimeout(()=>{ if(S.yo&&!S.vivo) escuchar(); },5000); } });
+  if(!escuchar.vis){ escuchar.vis=true; document.addEventListener("visibilitychange",async()=>{ if(!document.hidden&&S.yo){ try{ await cargarTodo(); render(); if(!S.vivo) escuchar(); }catch(e){} } }); }
 }
 
 /* ============ escritura ============ */
@@ -668,6 +668,30 @@ async function cambioMain(e){
 }
 
 document.addEventListener("visibilitychange",()=>{ if(document.hidden&&B){ leer(); guardarBorrador(); } });
+/* ====== actualización automática ====== */
+let ETAG=null, PEND_RECARGA=false;
+async function revisarVersion(){
+  if(location.protocol==="file:") return;
+  try{
+    const r=await fetch(location.pathname+"?v="+Date.now(),{method:"HEAD",cache:"no-store"});
+    const e=r.headers.get("etag")||r.headers.get("last-modified"); if(!e) return;
+    if(ETAG===null){ ETAG=e; return; }
+    if(e!==ETAG){ PEND_RECARGA=true; intentarRecarga(); }
+  }catch(_){}
+}
+function intentarRecarga(){
+  if(!PEND_RECARGA) return;
+  if(B){ leer(); guardarBorrador(); return; }        // no recargar en medio de un pedido
+  if($("#velo").classList.contains("on")) return;     // ni con una ventana abierta
+  toast("Actualizando la app…"); setTimeout(()=>location.reload(),800);
+}
+revisarVersion();
+setInterval(()=>{ if(!document.hidden) revisarVersion(); },60000);
+setInterval(intentarRecarga,5000);
+document.addEventListener("visibilitychange",()=>{ if(!document.hidden) revisarVersion(); });
+/* datos al día aunque se caiga el tiempo real */
+setInterval(async()=>{ if(document.hidden||!S.yo||B) return; try{ await cargarTodo(); render(); if(!S.vivo) escuchar(); }catch(_){} },45000);
+window.addEventListener("online",async()=>{ if(!S.yo) return; try{ await cargarTodo(); render(); escuchar(); }catch(_){} });
 window.addEventListener("pagehide",()=>{ if(B){ leer(); guardarBorrador(); } });
 inicio();
 })();
