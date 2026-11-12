@@ -409,13 +409,18 @@ function panelTotal(){
     '<div class="pdos">'+S.perfiles.map(pf=>{const x=base.filter(p=>p.vendedor===pf.user_id);return '<span><i style="background:'+pf.color+'"></i>'+esc(pf.user_id===S.yo.user_id?"Usted":pf.nombre.split(" ")[0])+' <b>'+plata(x.reduce((s,p)=>s+p.total,0))+'</b> · '+x.length+'</span>';}).join("")+'</div></div>';
 }
 function grupoTit(f){ const d=f<hoy()?"Atrasado · ":""; return d+(f===hoy()?"Hoy · ":f===masDias(hoy(),1)?"Mañana · ":"")+nomDia(f); }
+function borrados(){
+  const b=filtrar(S.pedidos.filter(p=>p.estado==="cancelado")).sort((a,b)=>new Date(b.creado)-new Date(a.creado)).slice(0,15);
+  if(!b.length) return "";
+  return '<details class="card" style="margin-top:16px"><summary style="margin:0;color:var(--gris)">Pedidos borrados ('+b.length+')</summary>'+b.map(p=>'<div class="lin"><span class="sp"><b>'+esc(p.nombre||celB(p.cel))+'</b><br><span class="small">'+esc(resumen(p))+' · '+plata(p.total)+'</span></span><button class="btn b-sua" style="padding:8px 10px;font-size:13px" data-a="recuperar" data-id="'+p.id+'">Recuperar</button></div>').join("")+'</details>';
+}
 function vPedidos(){
   const l=filtrar(activos()).sort((a,b)=>new Date(b.creado)-new Date(a.creado));
-  if(!l.length) return '<div class="vacio"><b>Todavía no tiene pedidos</b>Toque el botón naranja <b style="display:inline;color:var(--naranja)">+</b> para anotar uno.</div>';
+  if(!l.length) return '<div class="vacio"><b>Todavía no tiene pedidos</b>Toque el botón naranja <b style="display:inline;color:var(--naranja)">+</b> para anotar uno.</div>'+borrados();
   const pend=l.filter(p=>p.estado!=="entregado");
   const tot=l.reduce((s,p)=>s+p.total,0), c=l.reduce((s,p)=>s+cuantos(p),0);
   return '<div class="grid3" style="margin-bottom:12px"><div class="kpi"><div class="l">Pedidos</div><div class="v">'+l.length+'</div><div class="s">'+pend.length+' sin entregar</div></div><div class="kpi"><div class="l">Combos</div><div class="v">'+c+'</div></div><div class="kpi dest"><div class="l">Vendido</div><div class="v">'+plata(tot)+'</div></div></div>'+
-    '<div class="small" style="margin:4px 2px 8px;font-weight:700">MIS PEDIDOS · EL MÁS NUEVO ARRIBA</div>'+l.map(p=>tarjeta(p,"ped")).join("");
+    '<div class="small" style="margin:4px 2px 8px;font-weight:700">MIS PEDIDOS · EL MÁS NUEVO ARRIBA</div>'+l.map(p=>tarjeta(p,"ped")).join("")+borrados();
 }
 function alistar(lista){
   let sal=0,cam=0,salLb=0,camLb=0; lista.forEach(p=>(p.items||[]).forEach(i=>{const g=GRAMOS[i.id];if(g){sal+=g.sal*i.cant;cam+=g.cam*i.cant;} else if(i.id==="salmon-lb")salLb+=i.cant; else if(i.id==="camaron-lb")camLb+=i.cant;}));
@@ -577,7 +582,7 @@ $("#hoja").addEventListener("click",async e=>{
       case "otro": return guardarForm(true);
       case "vercal": leer(); B.verCal=!B.verCal; return re();
       case "usar": {leer();const k=conocido();if(k){B.nombre=B.nombre||k.nombre;if(k.dir){B.dir=B.dir||k.dir;}}return re();}
-      case "borrar": {borrarBorrador(); const id=B.id;hoja('<h2>¿Borrar este pedido?</h2><div class="muted">No se puede deshacer.</div><div class="acts"><button class="btn b-sua" data-h="cerrar">No</button><button class="btn b-rojo" data-h="siborrar" data-id="'+id+'">Sí, borrar</button></div>');return;}
+      case "borrar": {borrarBorrador(); const id=B.id;hoja('<h2>¿Borrar este pedido?</h2><div class="muted">Si se equivoca, lo recupera en Pedidos → Pedidos borrados.</div><div class="acts"><button class="btn b-sua" data-h="cerrar">No</button><button class="btn b-rojo" data-h="siborrar" data-id="'+id+'">Sí, borrar</button></div>');return;}
     }
     return;
   }
@@ -662,6 +667,7 @@ async function clicMain(e){
     case "excel": excel(a.dataset.r==="todo"); break;
     case "gasto": hoja('<h2>Compra o gasto</h2><div class="small">Queda a nombre de '+esc(S.yo.nombre)+' · hoy</div><label>¿En qué?</label><div class="chips">'+["Compra de salmón","Compra de camarón","Gasolina","Bolsas","Hielo"].map(x=>'<button class="chip" data-h="gtxt" data-v="'+x+'">'+x+'</button>').join("")+'</div><input id="g-d" style="margin-top:8px" placeholder="O escriba otro"><label>¿Cuánto?</label><input id="g-v" inputmode="numeric" placeholder="$0"><div class="acts"><button class="btn b-sua" data-h="cerrar">Cancelar</button><button class="btn b-nar" data-h="ggasto">Guardar</button></div>'); break;
     case "borrargasto": { const {error}=await sb.from("combos_gastos").delete().eq("id",id); if(error) return toast("No se pudo borrar"); S.gastos=S.gastos.filter(g=>g.id!==id); render(); break; }
+    case "recuperar": try{ await cambiarPedido(id,{estado:"pendiente"}); toast("Pedido recuperado"); }catch(_){} break;
     case "copiarpromo": copiar(mensajeVenta()); break;
     case "clave": hoja('<h2>Cambiar clave</h2><label>Nueva clave (6 números)</label><input id="c-1" type="password" inputmode="numeric" maxlength="6"><label>Repítala</label><input id="c-2" type="password" inputmode="numeric" maxlength="6"><div class="acts"><button class="btn b-sua" data-h="cerrar">Cancelar</button><button class="btn b-nar" data-h="gclave">Guardar</button></div>'); break;
     case "salir": if(canal) sb.removeChannel(canal); await sb.auth.signOut(); ELEGIDO=null; pantallaLogin(); break;
