@@ -172,6 +172,21 @@ table.t tr:last-child td{border-bottom:0}
 .err{color:var(--rojo);text-align:center;font-weight:600;font-size:14px;min-height:20px;margin-top:-10px;margin-bottom:8px}
 .sacude{animation:sac .35s}
 @keyframes sac{20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tile{display:flex;flex-direction:column;gap:6px}
+.tilebtn{border:2px solid var(--linea);background:var(--carta);border-radius:16px;padding:0;overflow:hidden;text-align:left;display:flex;flex-direction:column;transition:transform .08s,border-color .15s}
+.tilebtn:active{transform:scale(.97)}
+.tile.sel .tilebtn{border-color:var(--naranja);box-shadow:0 0 0 3px var(--naranja2)}
+.tim{position:relative;display:block;aspect-ratio:16/10;background:linear-gradient(135deg,#FCEBDD,#E6EDF8)}
+.tim img{width:100%;height:100%;object-fit:cover;display:block}
+.tc{position:absolute;top:8px;right:8px;min-width:34px;height:34px;border-radius:999px;background:var(--naranja);color:#fff;font-weight:800;font-size:18px;display:flex;align-items:center;justify-content:center;padding:0 8px;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.tc.pop{animation:pop .25s}
+@keyframes pop{50%{transform:scale(1.35)}}
+.tn{font-weight:700;font-size:15px;padding:8px 10px 0}
+.tp{font-weight:800;font-size:17px;padding:0 10px 10px;color:var(--naranja)}
+.tmenos{border:0;background:var(--suave);border-radius:10px;padding:8px;font-weight:600;font-size:13px;color:var(--gris)}
+.suma{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--naranja2);border-radius:12px;padding:10px 12px;margin-top:10px;font-size:14px;font-weight:600;color:#8A3F10}
+.suma b{font-size:18px;color:var(--tinta)}
 </style>
 </head>
 <body>
@@ -467,7 +482,8 @@ function calendario(){
 function pintarForm(){
   const nuevo=!S.pedidos.find(x=>x.id===B.id), k=nuevo?conocido():null, sab=proxSabado();
   $("#hoja").innerHTML='<div class="asa"></div><h2>'+(nuevo?"Nuevo pedido":"Editar pedido")+'</h2><div class="small">Vende: '+S.perfiles.map(p=>'<button class="chip '+(B.vendedor===p.user_id?"on":"")+'" style="padding:4px 10px;font-size:12px;margin-left:4px" data-vend="'+p.user_id+'">'+esc(p.nombre.split(" ")[0])+'</button>').join("")+'</div>'+
-  '<label>Combos</label>'+B.items.map((i,n)=>'<div class="prod '+(i.cant?"sel":"")+'"><div class="sp"><div class="n">'+esc(i.nombre)+'</div><div class="small">'+plata(i.precio)+'</div></div><div class="step"><button class="m" data-menos="'+n+'">−</button><span>'+i.cant+'</span><button data-mas="'+n+'">+</button></div></div>').join("")+
+  '<label>Toque el combo para agregarlo · cada toque suma uno</label><div class="tiles">'+B.items.map((i,n)=>'<div class="tile'+(i.cant?" sel":"")+'"><button class="tilebtn" data-mas="'+n+'" aria-label="Agregar '+esc(i.nombre)+'"><span class="tim"><img src="img/'+esc(i.id)+'.jpg" alt="" onerror="this.style.display=\'none\'">'+(i.cant?'<span class="tc" id="tc'+n+'">'+i.cant+'</span>':'')+'</span><span class="tn">'+esc(i.nombre.replace(/^Combo /,""))+'</span><span class="tp">'+plata(i.precio)+'</span></button>'+(i.cant?'<button class="tmenos" data-menos="'+n+'">− Quitar uno</button>':'')+'</div>').join("")+'</div>'+
+  (subB()?'<div class="suma"><span>'+B.items.filter(i=>i.cant).map(i=>i.cant+"× "+esc(i.nombre.replace(/^Combo /,""))).join(" + ")+'</span><b>'+plata(subB())+'</b></div>':'')+
   '<label>Celular</label><input id="f-cel" inputmode="tel" autocomplete="off" placeholder="300 123 4567" value="'+esc(B.cel)+'">'+
   (k?'<div class="conocido">Ya compró: <b>'+esc(k.nombre||celB(k.cel))+'</b>'+(k.dir?' · '+esc(k.dir):'')+' <button class="chip" style="padding:4px 10px;font-size:12px;margin-left:4px" data-f="usar">Usar datos</button></div>':'')+
   '<label>Entrega</label><div class="chips"><button class="chip '+(B.conDom?"on":"")+'" data-dom="1">🛵 Domicilio +'+plata(S.config.domicilio)+'</button><button class="chip '+(!B.conDom?"on":"")+'" data-dom="0">Recoge</button></div>'+
@@ -508,8 +524,8 @@ $("#hoja").addEventListener("click",async e=>{
   const t=e.target;
   if(B){
     const sy=$("#hoja").scrollTop, re=()=>{pintarForm();$("#hoja").scrollTop=sy;};
-    if(t.dataset.mas!=null){leer();B.items[+t.dataset.mas].cant++;return re();}
-    if(t.dataset.menos!=null){leer();const i=B.items[+t.dataset.menos];if(i.cant>0)i.cant--;return re();}
+    const bm=t.closest("[data-mas]"); if(bm){leer();const n=+bm.dataset.mas;B.items[n].cant++;re();const c=$("#tc"+n);if(c){c.classList.remove("pop");void c.offsetWidth;c.classList.add("pop");}try{navigator.vibrate&&navigator.vibrate(15);}catch(_){}return;}
+    const bq=t.closest("[data-menos]"); if(bq){leer();const i=B.items[+bq.dataset.menos];if(i.cant>0)i.cant--;return re();}
     if(t.dataset.vend){leer();B.vendedor=t.dataset.vend;return re();}
     if(t.dataset.dom!=null&&t.closest(".hoja")){leer();B.conDom=t.dataset.dom==="1";return re();}
     const fb=t.closest("[data-fecha]"); if(fb){leer();B.fecha=fb.dataset.fecha;CALMES=null;return re();}
