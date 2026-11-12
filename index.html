@@ -103,7 +103,7 @@ button{cursor:pointer}
 /* hoja */
 .velo{position:fixed;inset:0;background:rgba(31,29,26,.42);z-index:40;display:none;align-items:flex-end;justify-content:center}
 .velo.on{display:flex}
-.hoja{background:var(--fondo);width:100%;max-width:560px;max-height:94dvh;overflow:auto;border-radius:22px 22px 0 0;padding:8px 16px calc(18px + env(safe-area-inset-bottom));animation:sube .22s cubic-bezier(.2,.8,.2,1)}
+.hoja{background:var(--fondo);width:100%;max-width:560px;max-height:96dvh;overflow:auto;border-radius:22px 22px 0 0;padding:8px 16px calc(18px + env(safe-area-inset-bottom));animation:sube .22s cubic-bezier(.2,.8,.2,1)}
 .hoja .asa{width:40px;height:5px;border-radius:3px;background:var(--linea);margin:4px auto 12px}
 @keyframes sube{from{transform:translateY(30px);opacity:.6}to{transform:none;opacity:1}}
 .hoja h2{font-size:21px;font-weight:800;letter-spacing:-.02em;margin:0 0 4px}
@@ -359,7 +359,8 @@ function render(){
   document.querySelectorAll(".nav .t").forEach(b=>b.classList.toggle("on",b.dataset.t===S.tab));
   const pend=activos().filter(p=>p.fecha===S.dia&&p.estado!=="entregado").length, bd=$("#bdg");
   bd.style.display=pend?"":"none"; bd.textContent=pend;
-  $("#main").innerHTML=({pedidos:vPedidos,entregas:vEntregas,cuentas:vCuentas,ajustes:vAjustes})[S.tab]();
+  const bor=leerBorrador(), hayB=bor&&bor.items&&!B;
+  $("#main").innerHTML=(hayB?'<button class="aviso" data-a="nuevo" style="width:100%;border:0;text-align:left;font-weight:600">✏️ Tiene un pedido sin guardar'+(bor.nombre||bor.cel?' ('+esc(bor.nombre||celB(bor.cel))+')':'')+' · <u>continuar</u></button>':'')+({pedidos:vPedidos,entregas:vEntregas,cuentas:vCuentas,ajustes:vAjustes})[S.tab]();
   pintarVivo();
 }
 
@@ -459,8 +460,14 @@ function mensajeVenta(){
 
 /* ============ formulario ============ */
 let B=null,CALMES=null;
-function abrirPedido(p){
+const BKEY="combos-borrador";
+function guardarBorrador(){ try{ if(B&&(B.items.some(i=>i.cant)||dig(B.cel)||B.dir||B.nombre)) localStorage.setItem(BKEY,JSON.stringify(B)); }catch(_){} }
+function leerBorrador(){ try{ return JSON.parse(localStorage.getItem(BKEY)||"null"); }catch(_){ return null; } }
+function borrarBorrador(){ try{ localStorage.removeItem(BKEY); }catch(_){} }
+const conDatos=()=>B&&(B.items.some(i=>i.cant)||dig(B.cel).length>0||(B.dir||"").trim()||(B.nombre||"").trim());
+function abrirPedido(p,forzarNuevo){
   CALMES=null;
+  if(!p&&!forzarNuevo){ const d=leerBorrador(); if(d&&d.items){ B=d; pintarForm(); abrir(); toast("Recuperé el pedido que estaba escribiendo"); return; } }
   if(p){ B=JSON.parse(JSON.stringify(p)); B.conDom=!!p.domicilio; B.domVal=p.domicilio||0; B.manual=p.subtotal+(p.domicilio||0)!==p.total?p.total:null; }
   else B={id:crypto.randomUUID(),fecha:S.dia<hoy()?hoy():S.dia,vendedor:S.yo.user_id,cel:"",nombre:"",dir:"",hora:"",items:[],pagado:false,medio:"",cuando_paga:"",nota:"",estado:"pendiente",conDom:true,manual:null};
   prods().forEach(pr=>{ if(!B.items.find(i=>i.id===pr.id)) B.items.push({id:pr.id,nombre:pr.nombre,precio:pr.precio,cant:0}); });
@@ -513,8 +520,9 @@ async function guardarForm(otro){
   if(nuevo) p.creado=new Date().toISOString();
   const btn=document.querySelector('[data-f="guardar"]'); if(btn) btn.disabled=true;
   try{ await guardarPedido(p); }catch(e){ if(btn) btn.disabled=false; return; }
+  borrarBorrador();
   toast(p.fecha===S.dia?"Pedido guardado":"Guardado para "+nomDia(p.fecha).toLowerCase());
-  if(otro) abrirPedido(); else cerrar();
+  if(otro) abrirPedido(null,true); else cerrar();
 }
 function abrir(){ $("#velo").classList.add("on"); document.body.style.overflow="hidden"; }
 function cerrar(){ $("#velo").classList.remove("on"); document.body.style.overflow=""; B=null; }
@@ -523,7 +531,7 @@ function hoja(h){ B=null; $("#hoja").innerHTML='<div class="asa"></div>'+h; abri
 $("#hoja").addEventListener("click",async e=>{
   const t=e.target;
   if(B){
-    const sy=$("#hoja").scrollTop, re=()=>{pintarForm();$("#hoja").scrollTop=sy;};
+    const sy=$("#hoja").scrollTop, re=()=>{pintarForm();$("#hoja").scrollTop=sy;guardarBorrador();};
     const bm=t.closest("[data-mas]"); if(bm){leer();const n=+bm.dataset.mas;B.items[n].cant++;re();const c=$("#tc"+n);if(c){c.classList.remove("pop");void c.offsetWidth;c.classList.add("pop");}try{navigator.vibrate&&navigator.vibrate(15);}catch(_){}return;}
     const bq=t.closest("[data-menos]"); if(bq){leer();const i=B.items[+bq.dataset.menos];if(i.cant>0)i.cant--;return re();}
     if(t.dataset.vend){leer();B.vendedor=t.dataset.vend;return re();}
@@ -533,7 +541,7 @@ $("#hoja").addEventListener("click",async e=>{
     if(t.dataset.hora){leer();B.hora=t.dataset.hora;return re();}
     if(t.dataset.pago!=null){leer();B.pagado=!!t.dataset.pago;B.medio=t.dataset.pago;return re();}
     const f=t.closest("[data-f]"); if(f) switch(f.dataset.f){
-      case "cerrar": return cerrar();
+      case "cerrar": leer(); if(conDatos()&&!S.pedidos.find(x=>x.id===B.id)){ const copia=JSON.parse(JSON.stringify(B)); hoja('<h2>¿Descartar este pedido?</h2><div class="muted">Se pierde lo que escribió.</div><div class="acts"><button class="btn b-nar" data-h="volver">Seguir escribiendo</button><button class="btn b-rojo" data-h="descartar">Descartar</button></div>'); hoja.copia=copia; return; } borrarBorrador(); return cerrar();
       case "guardar": return guardarForm(false);
       case "otro": return guardarForm(true);
       case "vercal": leer(); B.verCal=!B.verCal; return re();
@@ -545,6 +553,8 @@ $("#hoja").addEventListener("click",async e=>{
   const h=t.closest("[data-h]"); if(!h) return; const id=h.dataset.id, p=S.pedidos.find(x=>x.id===id);
   switch(h.dataset.h){
     case "cerrar": cerrar(); break;
+    case "volver": B=hoja.copia; pintarForm(); break;
+    case "descartar": borrarBorrador(); cerrar(); break;
     case "siborrar": { cerrar(); const {error}=await sb.from("combos_pedidos").update({estado:"cancelado",editado_por:S.yo.user_id}).eq("id",id); if(error) toast("No se pudo borrar"); else { p.estado="cancelado"; render(); toast("Pedido borrado"); } break; }
     case "medio": { const c={}; if(h.dataset.m){c.pagado=true;c.medio=h.dataset.m;c.cuando_paga="";} if(h.dataset.e==="1"){c.estado="entregado";c.entregado_en=new Date().toISOString();}
       try{ await cambiarPedido(id,c); }catch(_){ return; } if(h.dataset.e==="1") trasEntregar(p); else { cerrar(); toast("Pago anotado"); } break; }
@@ -559,9 +569,10 @@ $("#hoja").addEventListener("click",async e=>{
       const {error}=await sb.auth.updateUser({password:a}); if(error) return toast("No se pudo cambiar"); cerrar(); toast("Clave cambiada"); break; }
   }
 });
-$("#velo").addEventListener("click",e=>{ if(e.target.id==="velo") cerrar(); });
+$("#velo").addEventListener("click",e=>{ if(e.target.id!=="velo") return; if(B){ leer(); guardarBorrador(); return; } cerrar(); });
 $("#hoja").addEventListener("input",e=>{
   if(!B) return;
+  clearTimeout(guardarBorrador.t); guardarBorrador.t=setTimeout(()=>{ if(B){ leer(); guardarBorrador(); } },400);
   if(e.target.id==="f-val"){ leer(); const x=$("#f-tot"); if(x) x.textContent=plata(totB()); }
   if(e.target.id==="f-cel"){ const antes=!!conocido(); B.cel=e.target.value; if(antes!==!!conocido()&&!S.pedidos.find(x=>x.id===B.id)){ leer(); const sy=$("#hoja").scrollTop; pintarForm(); $("#hoja").scrollTop=sy; const i=$("#f-cel"); i.focus(); i.setSelectionRange(i.value.length,i.value.length);} }
   if(e.target.id==="f-hora"){ B.hora=e.target.value; document.querySelectorAll("[data-hora]").forEach(c=>c.classList.toggle("on",c.dataset.hora===B.hora)); }
@@ -634,6 +645,8 @@ async function cambioMain(e){
   if(t.id==="gracias"){ const v=t.value.trim(); if(!v||v===S.config.gracias) return; const {error}=await sb.from("combos_config").update({gracias:v}).eq("id",1); if(error) return toast("No se guardó"); S.config.gracias=v; render(); toast("Mensaje guardado"); }
 }
 
+document.addEventListener("visibilitychange",()=>{ if(document.hidden&&B){ leer(); guardarBorrador(); } });
+window.addEventListener("pagehide",()=>{ if(B){ leer(); guardarBorrador(); } });
 inicio();
 })();
 </script>
