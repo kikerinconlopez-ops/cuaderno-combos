@@ -487,8 +487,8 @@ function mensajeVenta(){
 /* ============ formulario ============ */
 let B=null,CALMES=null;
 const BKEY="combos-borrador";
-function guardarBorrador(){ try{ if(B&&(B.items.some(i=>i.cant)||dig(B.cel)||B.dir||B.nombre)) localStorage.setItem(BKEY,JSON.stringify(B)); }catch(_){} }
-function leerBorrador(){ try{ return JSON.parse(localStorage.getItem(BKEY)||"null"); }catch(_){ return null; } }
+function guardarBorrador(){ try{ if(B&&!S.pedidos.find(x=>x.id===B.id)&&(B.items.some(i=>i.cant)||dig(B.cel)||B.dir||B.nombre)) localStorage.setItem(BKEY,JSON.stringify(B)); }catch(_){} }
+function leerBorrador(){ try{ const d=JSON.parse(localStorage.getItem(BKEY)||"null"); if(d&&S.pedidos.find(x=>x.id===d.id)){ localStorage.removeItem(BKEY); return null; } return d; }catch(_){ return null; } }
 function borrarBorrador(){ try{ localStorage.removeItem(BKEY); }catch(_){} }
 const conDatos=()=>B&&(B.items.some(i=>i.cant)||dig(B.cel).length>0||(B.dir||"").trim()||(B.nombre||"").trim());
 function abrirPedido(p,forzarNuevo){
@@ -575,7 +575,7 @@ $("#hoja").addEventListener("click",async e=>{
       case "otro": return guardarForm(true);
       case "vercal": leer(); B.verCal=!B.verCal; return re();
       case "usar": {leer();const k=conocido();if(k){B.nombre=B.nombre||k.nombre;if(k.dir){B.dir=B.dir||k.dir;}}return re();}
-      case "borrar": {const id=B.id;hoja('<h2>¿Borrar este pedido?</h2><div class="muted">No se puede deshacer.</div><div class="acts"><button class="btn b-sua" data-h="cerrar">No</button><button class="btn b-rojo" data-h="siborrar" data-id="'+id+'">Sí, borrar</button></div>');return;}
+      case "borrar": {borrarBorrador(); const id=B.id;hoja('<h2>¿Borrar este pedido?</h2><div class="muted">No se puede deshacer.</div><div class="acts"><button class="btn b-sua" data-h="cerrar">No</button><button class="btn b-rojo" data-h="siborrar" data-id="'+id+'">Sí, borrar</button></div>');return;}
     }
     return;
   }
@@ -584,7 +584,7 @@ $("#hoja").addEventListener("click",async e=>{
     case "cerrar": cerrar(); break;
     case "volver": B=hoja.copia; pintarForm(); break;
     case "descartar": borrarBorrador(); cerrar(); break;
-    case "siborrar": { cerrar(); const {error}=await sb.from("combos_pedidos").update({estado:"cancelado",editado_por:S.yo.user_id}).eq("id",id); if(error) toast("No se pudo borrar"); else { p.estado="cancelado"; render(); toast("Pedido borrado"); } break; }
+    case "siborrar": { borrarBorrador(); cerrar(); const {error}=await sb.from("combos_pedidos").update({estado:"cancelado",editado_por:S.yo.user_id}).eq("id",id); if(error) toast("No se pudo borrar"); else { p.estado="cancelado"; render(); toast("Pedido borrado"); } break; }
     case "medio": { const c={}; if(h.dataset.m){c.pagado=true;c.medio=h.dataset.m;c.cuando_paga="";} if(h.dataset.e==="1"){c.estado="entregado";c.entregado_en=new Date().toISOString();}
       try{ await cambiarPedido(id,c); }catch(_){ return; } if(h.dataset.e==="1") trasEntregar(p); else { cerrar(); toast("Pago anotado"); } break; }
     case "gracias": cerrar(); setTimeout(()=>cambiarPedido(id,{gracias_en:new Date().toISOString()}).catch(()=>{}),400); break;
