@@ -472,11 +472,11 @@ function vEntregas(){
   const fechas=[...new Set(pend.map(p=>p.fecha))].sort();
   fechas.forEach(f=>{
     const g=ordenarRuta(pend.filter(p=>p.fecha===f));
-    const lm=linkMaps(g); let ultC=null; const sinC=g.filter(p=>!comunaDe(p)).length;
+    let ultC=null; const sinC=g.filter(p=>!comunaDe(p)).length;
     const sinAviso=g.filter(p=>!p.avisado_en).length, al=alistar(g);
     h+='<div class="grupo"><div class="gcab"><div class="sp"><b>'+esc(grupoTit(f))+'</b><div class="small">'+g.length+(g.length===1?" pedido":" pedidos")+' · '+plata(g.reduce((s,p)=>s+p.total,0))+'</div></div></div>'+
       (al?'<div class="small" style="color:var(--tinta);margin:2px 0 10px"><b>Alistar:</b> '+esc(al)+'</div>':'')+
-      '<div class="ruta">🧭 <b>Recorrido sugerido</b> saliendo de '+esc(S.config.partida_barrio||"Comuna 1")+': '+[...new Set(g.map(comunaDe).filter(Boolean))].map(c=>'Comuna '+c).join(" → ")+(sinC?' <span class="small">('+sinC+' sin barrio, al final)</span>':'')+(lm?'<a class="btn b-tin full" style="margin-top:8px;font-size:14px;padding:10px" href="'+lm+'" target="_blank" rel="noopener">Abrir ruta en Google Maps</a>':'')+'</div>'+
+      '<div class="ruta">🧭 <b>Recorrido sugerido</b> saliendo de '+esc(S.config.partida_barrio||"Comuna 1")+': '+[...new Set(g.map(comunaDe).filter(Boolean))].map(c=>'Comuna '+c).join(" → ")+(sinC?' <span class="small">('+sinC+' sin barrio, al final)</span>':'')+'</div>'+
       '<div class="grid2" style="margin-bottom:10px"><button class="btn b-nar" style="font-size:14px;padding:11px 8px" data-a="avisar" data-f="'+f+'">🛵 Ya vamos'+(sinAviso?" · "+sinAviso:" ✓")+'</button><button class="btn b-bor" style="font-size:14px;padding:11px 8px" data-a="copiarlista" data-f="'+f+'">Copiar ruta</button></div>'+
       g.map((p,i)=>{const c=comunaDe(p);let cab='';if(c!==ultC){ultC=c;cab='<div class="zcab">'+(c?'Comuna '+c+' · '+esc(ZONA[c]):'Sin barrio')+'</div>';}return cab+'<div class="nro">'+(i+1)+'</div>'+tarjeta(p,"ent");}).join("")+'</div>';
   });
